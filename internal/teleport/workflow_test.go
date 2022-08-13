@@ -1,7 +1,6 @@
 package teleport
 
 import (
-	"fmt"
 	"go.temporal.io/sdk/testsuite"
 	"testing"
 	"time"
@@ -74,7 +73,6 @@ func TestBreakGlassWorkflow(t *testing.T) {
 		name    string
 		content BreakGlassSignal
 		when    time.Duration
-		order   int
 	}
 	type args struct {
 		callbacks []signal
@@ -87,21 +85,21 @@ func TestBreakGlassWorkflow(t *testing.T) {
 		{"can dump", args{callbacks: []signal{
 			{"breakglass", BreakGlassSignal{
 				Action: BG_OPS_DUMP,
-			}, time.Millisecond, 1},
+			}, time.Millisecond},
 		}}, true},
 		{"happy path", args{callbacks: []signal{
 			{"breakglass", BreakGlassSignal{
 				Action: BG_REQUEST_ACCESS,
-			}, time.Millisecond, 1},
+			}, time.Millisecond},
 			{"breakglass", BreakGlassSignal{
 				Action: BG_REQUEST_ACCESS,
-			}, 10 * time.Millisecond, 2},
+			}, 10 * time.Millisecond},
 			{"breakglass", BreakGlassSignal{
 				Action: BG_REQUEST_APPROVED,
-			}, 50 * time.Millisecond, 3},
+			}, 50 * time.Millisecond},
 			{"breakglass", BreakGlassSignal{
 				Action: BG_OPS_DUMP,
-			}, 100 * time.Millisecond, 4},
+			}, 100 * time.Millisecond},
 		}}, false},
 	}
 	ts := testsuite.WorkflowTestSuite{}
@@ -112,14 +110,13 @@ func TestBreakGlassWorkflow(t *testing.T) {
 			env.SetTestTimeout(time.Second)
 			env.RegisterWorkflow(BreakGlassWorkflow)
 			// Setuo the signals ..
-			for i, signal := range tt.args.callbacks {
-				sname := signal.name
-				scontent := signal.content
-				swhen := signal.when
-				fmt.Println("INDEX: ", i, " ORDER: ", signal.order, " SIG: ", signal.content.Action)
+			for _, signal := range tt.args.callbacks {
+				// As per normal footgun :sweat:
+				// Make a copy; otherwise the BGSignal content gets overwritten ,..
+				signal := signal
 				env.RegisterDelayedCallback(func() {
-					env.SignalWorkflow(sname, scontent)
-				}, swhen)
+					env.SignalWorkflow(signal.name, signal.content)
+				}, signal.when)
 			}
 			// Original
 			//env.RegisterDelayedCallback(func() {

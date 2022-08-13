@@ -42,25 +42,19 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 	bgs.ID = workflow.GetInfo(ctx).WorkflowExecution.ID
 	// DEBUG
 	//spew.Dump(bgs)
+
+	// Restore from state from previous Dump to continue
+	// TODO: A BreakGlassReq coming in; considered as restore?
+
 	var bgsig BreakGlassSignal
 	recv := workflow.GetSignalChannel(ctx, "breakglass")
-
-	// Below triggers workflow error - ScheduleToClose
-	//for recv.Receive(ctx, &bgsig) {}
-
 	for {
 		more := recv.Receive(ctx, &bgsig)
 		if !more {
 			return fmt.Errorf("Unexpected channel closed! State: %v", bgs)
 		}
-		spew.Dump(bgsig)
-		// Restore from state from previous Dump to continue
-		// Receive Operational Signal to Dump state and close
-		if bgsig.Action == BG_OPS_DUMP {
-			fmt.Println("Dumping state .... finish flow ..")
-			spew.Dump(bgs)
-			return nil
-		}
+		// DEBUG; content of Signal Received
+		//spew.Dump(bgsig)
 
 		// First cut StateMachine:
 		// 	BGS_INITIAL --> SIG<BG_REQUEST_ACCESS> --> BGS_PENDING
@@ -70,6 +64,17 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 		// Gets signal for RequestAccess
 
 		switch bgsig.Action {
+		// Depending on the current state machine; some signals may be ignored!!
+
+		// Gets signal to Approve; including the request timing
+		// validate the requested timing ..
+		// Gets signal to Reject
+
+		case BG_OPS_DUMP:
+			fmt.Println("Dumping state .... finish flow ..")
+			spew.Dump(bgs)
+			return nil
+
 		case BG_REQUEST_ACCESS:
 			if bgs.Status != BGS_INITIAL {
 				fmt.Println("BAD SIG BG_REQUEST_ACCESS for STATUS: ", bgs.Status, " ignoring ..")
@@ -90,20 +95,14 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 				fmt.Println("BAD SIG BG_REQUEST_APPROVED for STATUS: ", bgs.Status, " ignoring ..")
 				continue
 			}
+			// With an Approve; have a closing timer
+			// Finish; continue as new
 			fmt.Println("Now call timer ....")
 		default:
 			fmt.Println("BAD SIG", bgsig.Action, " ignoring ..")
 			continue
 
 		}
-		// Depending on the current state machine; some signals may be ignored!!
-
-		// Gets signal to Approve; including the request timing
-		// validate the requested timing ..
-		// Gets signal to Reject
-
-		// With an Approve; have a closing timer
-		// Finish; continue as new
 
 	}
 
