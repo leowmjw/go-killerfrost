@@ -20,3 +20,6 @@
 # Ignore Goland
 .idea
 
+# Ignore Terraform files
+.terraform
+
