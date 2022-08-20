@@ -21,5 +21,5 @@
 .idea
 
 # Ignore Terraform files
-.terraform
-
+.terraform*
+terraform.tfstate*
