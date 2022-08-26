@@ -9,7 +9,7 @@ provider "postgresql" {
   alias    = "pgadm"
   host     = "localhost"
   username = "leow"
-  sslmode = "disable"
+  sslmode  = "disable"
 }
 
 provider "postgresql" {
@@ -17,5 +17,5 @@ provider "postgresql" {
   host     = "localhost"
   username = "leow"
   database = "myterraform"
-  sslmode = "disable"
+  sslmode  = "disable"
 }
