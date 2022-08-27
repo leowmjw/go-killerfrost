@@ -2,10 +2,12 @@ module app
 
 go 1.19
 
-require go.temporal.io/sdk v1.16.0
+require (
+	github.com/davecgh/go-spew v1.1.1
+	go.temporal.io/sdk v1.16.0
+)
 
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

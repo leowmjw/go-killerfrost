@@ -98,6 +98,7 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 			// With an Approve; have a closing timer
 			// Finish; continue as new
 			fmt.Println("Now call timer ....")
+			// Call the waiting handler ..
 		default:
 			fmt.Println("BAD SIG", bgsig.Action, " ignoring ..")
 			continue
