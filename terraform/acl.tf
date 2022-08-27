@@ -1,8 +1,9 @@
 locals {
   acl = [
-    { name = "foo", inherit = true, login = true, membership = ["s2admin"], validity = "2022-12-31 00:00:00+00", connection_limit = -1, createrole = false },
+    // Looks like bug in module; data always out of sync // { name = "foo", inherit = true, login = true, membership = ["s2admin"], validity = "2022-12-31 00:00:00+00", connection_limit = -1, createrole = false },
+    { name = "foo", inherit = true, login = true, membership = ["s2admin"], validity = "infinity", connection_limit = 10, createrole = false },
     { name = "bar", inherit = true, login = true, membership = ["s2read"], validity = "infinity", connection_limit = -1, createrole = false },
-    { name = "backend", inherit = true, login = true, membership = ["app_write_role"], validity = "infinity", connection_limit = -1, createrole = false },
+    { name = "backend", inherit = true, login = true, membership = [], validity = "infinity", connection_limit = -1, createrole = false },
   ]
 }
 

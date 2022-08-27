@@ -59,14 +59,23 @@ locals {
     db_roles = [
       { id = "admin", role = "s2admin", inherit = true, login = false, validity = "infinity", privileges = ["USAGE", "CREATE"], createrole = true },
       { id = "readonly", role = "s2read", inherit = true, login = false, validity = "infinity", privileges = ["USAGE"], createrole = false },
+      { id = "write", role = "s2write", inherit = true, login = false, validity = "infinity", privileges = ["USAGE"], createrole = false },
     ],
 
     # ---------------------------------- GRANT PERMISSIONS ON ROLES ------------------------------------------------------------------------------------
     db_grants = [
+      # role s2read : define grant to apply on db 'myterraform', schema 's2'
       { object_type = "database", privileges = ["CONNECT"], objects = [], role = "s2read", owner_role = "s2admin", grant_option = false },
       { object_type = "type", privileges = ["USAGE"], objects = [], role = "s2read", owner_role = "s2admin", grant_option = true },
       { object_type = "table", privileges = ["SELECT", "REFERENCES", "TRIGGER"], objects = [], role = "s2read", owner_role = "s2admin", grant_option = false },
       { object_type = "sequence", privileges = ["SELECT", "USAGE"], objects = [], role = "s2read", owner_role = "s2admin", grant_option = false },
+
+      # role s2write : define grant to apply on db 'myterraform', schema 's2'
+      { object_type = "database", privileges = ["CONNECT"], objects = [], role = "s2write", owner_role = "s2admin", grant_option = false },
+      { object_type = "type", privileges = ["USAGE"], objects = [], role = "s2write", owner_role = "s2admin", grant_option = true },
+      { object_type = "table", privileges = ["SELECT", "REFERENCES", "TRIGGER", "INSERT", "UPDATE", "DELETE"], objects = [], role = "s2write", owner_role = "s2admin", grant_option = false },
+      { object_type = "sequence", privileges = ["SELECT", "USAGE"], objects = [], role = "s2write", owner_role = "s2admin", grant_option = false },
+      { object_type = "function", privileges = ["EXECUTE"], objects = [], role = "s2write", owner_role = "s2admin", grant_option = false },
     ],
   }
 }
