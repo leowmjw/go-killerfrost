@@ -2,9 +2,11 @@ package breakglass
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Bastion struct {
@@ -14,6 +16,24 @@ type Bastion struct {
 	PGConn   *pgx.Conn
 }
 
+func NewBastion(connString string) (error, Bastion) {
+	//pgconn.ParseConfig()
+	cc, err := pgx.ParseConfig(connString)
+	if err != nil {
+		return err, Bastion{}
+	}
+	conn, cerr := pgx.ConnectConfig(context.Background(), cc)
+	if cerr != nil {
+		return cerr, Bastion{}
+	}
+	//pgx.ConnectConfig()
+	return nil, Bastion{
+		Identity: "",
+		URL:      "",
+		Token:    "",
+		PGConn:   conn,
+	}
+}
 func (b Bastion) AddToRole(roleName string) error {
 	// GRANT s2write TO backend ;
 	return nil
@@ -39,13 +59,37 @@ func (b Bastion) RoleExists(roleName string) (bool, error) {
 	fmt.Println("In RoleExists ..")
 	fmt.Println("CONF: ", b.PGConn.Config().ConnString())
 	// SET ROLE s2write
-	ct, err := b.PGConn.Exec(context.Background(), "SET ROLE s2admin")
+	_, err := b.PGConn.Exec(context.Background(), fmt.Sprintf("SET ROLE %s", roleName))
 	if err != nil {
-		spew.Dump(err)
+		// If want to be more specific?
+		var pgerr *pgconn.PgError
+		if errors.As(err, &pgerr) {
+			fmt.Println(err.Error())
+			fmt.Println("DEETS:", pgerr.Code)
+		} else {
+			spew.Dump(err)
+		}
 		return false, err
 	}
-	fmt.Println("ROWS: ", ct.RowsAffected())
-	// Log out the current session ..
+	//fmt.Println("ROWS: ", ct.RowsAffected())
+	// Log out the current user .. diff from session!
+	cs, xerr := b.PGConn.Query(context.Background(), "SELECT current_user, session_user")
+	if xerr != nil {
+		spew.Dump(xerr)
+		return false, xerr
+	}
+	//fmt.Println("USER: ", cs.String())
+	if cs.Next() {
+		for _, col := range cs.RawValues() {
+			spew.Dump(string(col))
+		}
+	}
+	if cs.Next() {
+		fmt.Println("ERR! More rows ..")
+	}
+	// If exec after a defer; conn will be busy ..
+	//defer cs.Close()
+	cs.Close()
 	// If role exist and have permission by session ..
 
 	// If role exist but NO permission by session
