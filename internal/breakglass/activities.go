@@ -36,11 +36,33 @@ func NewBastion(connString string) (error, Bastion) {
 }
 func (b Bastion) AddToRole(roleName string) error {
 	// GRANT s2write TO backend ;
+	// Make the connection short term ..
+	cc, err := pgx.ParseConfig(b.URL)
+	if err != nil {
+		return err
+	}
+	conn, cerr := pgx.ConnectConfig(context.Background(), cc)
+	if cerr != nil {
+		return cerr
+	}
+
+	defer conn.Close(context.Background())
 	return nil
 }
 
-func (b Bastion) RemoveFromRole(roleName string) error {
+func (b Bastion) RemoveFromRole(userName, roleName string) error {
 	// REVOKE s2write FROM backend ;
+	// Make the connection short term ..
+	cc, err := pgx.ParseConfig(b.URL)
+	if err != nil {
+		return err
+	}
+	conn, cerr := pgx.ConnectConfig(context.Background(), cc)
+	if cerr != nil {
+		return cerr
+	}
+	revokeRoleMembership(conn, userName, roleName)
+	defer conn.Close(context.Background())
 
 	return nil
 }
