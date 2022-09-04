@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/jackc/pgx/v5 v5.0.0-beta.3
+	github.com/stretchr/testify v1.8.0
 	go.temporal.io/sdk v1.16.0
 )
 
@@ -23,7 +24,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/stretchr/objx v0.4.0 // indirect
-	github.com/stretchr/testify v1.8.0 // indirect
 	go.temporal.io/api v1.11.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect

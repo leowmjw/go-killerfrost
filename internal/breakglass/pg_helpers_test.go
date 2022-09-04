@@ -112,3 +112,60 @@ func Test_revokeRoleMembership(t *testing.T) {
 		})
 	}
 }
+
+func Test_grantRoleMembership(t *testing.T) {
+	t.Parallel()
+	type args struct {
+		conn     *pgx.Conn
+		userName string
+		roleName string
+	}
+	connString := "postgres://foo:password@127.0.0.1:5432/myterraform"
+	conn, err := pgx.Connect(context.Background(), connString)
+	//config, err := pgx.ParseConfig(connString)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    bool
+		wantErr bool
+	}{
+		{"happy #0 - ignore role = user", args{
+			conn:     conn,
+			userName: "foo",
+			roleName: "foo",
+		}, false, false},
+		{"happy #1 - nothing to do", args{
+			conn:     conn,
+			userName: "foo",
+			roleName: "s2admin",
+		}, false, false},
+		{"happy #2", args{
+			conn:     conn,
+			userName: "backend",
+			roleName: "s2read",
+		}, true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// With TXN no need to worry about mutations ..
+			tx, terr := conn.Begin(context.Background())
+			defer tx.Rollback(context.Background())
+			if terr != nil {
+				t.Error(terr)
+				return
+			}
+			got, err := grantRoleMembership(tt.args.conn, tt.args.userName, tt.args.roleName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("grantRoleMembership() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("grantRoleMembership() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -64,6 +64,45 @@ func readGrantRole(conn *pgx.Conn, userName, roleName string) error {
 	return nil
 }
 
+// grantRoleMembership grants the role *role* to the user *member*.
+// It returns false if the grant is not needed because the user is already
+// a member of this role.
+// func grantRoleMembership(db QueryAble, role, member string) (bool, error) {
+// grantRoleMembership
+func grantRoleMembership(conn *pgx.Conn, userName, roleName string) (bool, error) {
+	// Cannot grant user to itself!
+	if userName == roleName {
+		return false, nil
+	}
+	// Check if already a member; if not mark it and exit
+	var checkRoleName, checkGrantRoleName string
+	values := []any{
+		&checkRoleName,
+		&checkGrantRoleName,
+	}
+	row := conn.QueryRow(context.Background(), getGrantRoleQuery, userName, roleName)
+	err := row.Scan(values...)
+	if err != nil {
+		// If no row; then we can grant
+		if errors.Is(err, pgx.ErrNoRows) {
+			// now actually grant!
+			fmt.Println(fmt.Sprintf("grantRoleMembership: granting %s to %s", roleName, userName))
+			ct, xerr := conn.Exec(context.Background(), fmt.Sprintf("GRANT %s TO %s", roleName, userName))
+			if xerr != nil {
+				spew.Dump(xerr)
+				return false, xerr
+			}
+			fmt.Println("EXEC_RESULT: ", ct.String(), " NO: ", ct.RowsAffected())
+			return true, nil
+		}
+		// Unexpected ..
+		return false, fmt.Errorf("Error reading grant role: %w", err)
+	}
+	// If found the mapping; nothing to do
+	fmt.Println(fmt.Sprintf("grantRoleMembership: %s is already a member of %s, nothing to do", userName, roleName))
+	return false, nil
+}
+
 // revokeRoleMembership revokes the role *role* from the user *member*.
 // It returns false if the revoke is not needed because the user is not a member of this role.
 // func revokeRoleMembership(db QueryAble, role, member string) (bool, error) {
@@ -91,6 +130,7 @@ func revokeRoleMembership(conn *pgx.Conn, userName, roleName string) (bool, erro
 		return false, fmt.Errorf("Error reading grant role: %w", err)
 	}
 	// now actually revoke!
+	fmt.Println(fmt.Sprintf("revokeRoleMembership: Revoke %s from %s", roleName, userName))
 	ct, xerr := conn.Exec(context.Background(), fmt.Sprintf("REVOKE %s FROM %s", roleName, userName))
 	// Below does not work .. :sweat: ..
 	//ct, xerr := conn.Exec(context.Background(), "REVOKE '$1' FROM '$2'", roleName, userName)
