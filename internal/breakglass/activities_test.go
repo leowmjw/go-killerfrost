@@ -122,16 +122,24 @@ func TestBastion_RemoveFromRole(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{"happy #1", fields{
-			Identity: "",
-			URL:      "",
-			Token:    "",
-			PGConn:   nil,
+			URL: "postgres://foo:password@127.0.0.1:5432/myterraform",
 		}, args{
-			userName: "",
-			roleName: "",
-		}, true},
+			userName: "backend",
+			roleName: "s2read",
+		}, false},
+		{"happy #2", fields{
+			URL: "postgres://foo:password@127.0.0.1:5432/myterraform",
+		}, args{
+			userName: "backend",
+			roleName: "backend",
+		}, false},
+		{"happy #3", fields{
+			URL: "postgres://foo:password@127.0.0.1:5432/myterraform",
+		}, args{
+			userName: "s2read",
+			roleName: "backend",
+		}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -143,6 +151,60 @@ func TestBastion_RemoveFromRole(t *testing.T) {
 			}
 			if err := b.RemoveFromRole(tt.args.userName, tt.args.roleName); (err != nil) != tt.wantErr {
 				t.Errorf("RemoveFromRole() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestBastion_AddToRole(t *testing.T) {
+	t.Parallel()
+	type fields struct {
+		Identity string
+		URL      string
+		Token    string
+		PGConn   *pgx.Conn
+	}
+	type args struct {
+		userName string
+		roleName string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{"happy #0", fields{
+			URL: "postgres://foo:password@127.0.0.1:5432/myterraform",
+		}, args{
+			userName: "s2read",
+			roleName: "s2read",
+		}, false},
+		{"happy #1", fields{
+			URL: "postgres://foo:password@127.0.0.1:5432/myterraform",
+		}, args{
+			userName: "backend",
+			roleName: "s2read",
+		}, false},
+		{"happy #2", fields{
+			URL: "postgres://foo:password@127.0.0.1:5432/myterraform",
+		}, args{
+			userName: "s2read",
+			roleName: "backend",
+		}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := Bastion{
+				Identity: tt.fields.Identity,
+				URL:      tt.fields.URL,
+				Token:    tt.fields.Token,
+				PGConn:   tt.fields.PGConn,
+			}
+			// Full integration test, is it better to have func attached?
+			// pre, post? no rollback .. commit all the way!
+			if err := b.AddToRole(tt.args.userName, tt.args.roleName); (err != nil) != tt.wantErr {
+				t.Errorf("AddToRole() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

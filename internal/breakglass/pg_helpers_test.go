@@ -153,11 +153,11 @@ func Test_grantRoleMembership(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// With TXN no need to worry about mutations ..
 			tx, terr := conn.Begin(context.Background())
-			defer tx.Rollback(context.Background())
 			if terr != nil {
 				t.Error(terr)
 				return
 			}
+			defer tx.Rollback(context.Background())
 			got, err := grantRoleMembership(tt.args.conn, tt.args.userName, tt.args.roleName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("grantRoleMembership() error = %v, wantErr %v", err, tt.wantErr)

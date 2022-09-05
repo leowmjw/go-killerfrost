@@ -34,7 +34,7 @@ func NewBastion(connString string) (error, Bastion) {
 		PGConn:   conn,
 	}
 }
-func (b Bastion) AddToRole(roleName string) error {
+func (b Bastion) AddToRole(userName, roleName string) error {
 	// GRANT s2write TO backend ;
 	// Make the connection short term ..
 	cc, err := pgx.ParseConfig(b.URL)
@@ -45,8 +45,31 @@ func (b Bastion) AddToRole(roleName string) error {
 	if cerr != nil {
 		return cerr
 	}
-
 	defer conn.Close(context.Background())
+	// With TXN no need to worry about inconsistency
+	tx, terr := conn.Begin(context.Background())
+	if terr != nil {
+		return terr
+	}
+	// Do actual granting ...
+	granted, gerr := grantRoleMembership(conn, userName, roleName)
+	if gerr != nil {
+		// Bail the TXN! when unexpected
+		rerr := tx.Rollback(context.Background())
+		if rerr != nil {
+			fmt.Println("[WARN] Rollback ERR: ", rerr.Error())
+		}
+		return gerr
+	}
+	// Just flag unexpected behavior .
+	if !granted {
+		fmt.Println("[WARN] Unexpected behavior but no harm, continue on ..")
+	}
+	// All good.. commit!
+	cmterr := tx.Commit(context.Background())
+	if cmterr != nil {
+		fmt.Println("[WARN] Commit ERR: ", cerr.Error())
+	}
 	return nil
 }
 
@@ -61,9 +84,15 @@ func (b Bastion) RemoveFromRole(userName, roleName string) error {
 	if cerr != nil {
 		return cerr
 	}
-	revokeRoleMembership(conn, userName, roleName)
 	defer conn.Close(context.Background())
-
+	revoked, rerr := revokeRoleMembership(conn, userName, roleName)
+	if rerr != nil {
+		return rerr
+	}
+	// Just flag unexpected behavior .
+	if !revoked {
+		fmt.Println("[WARN] Unexpected behavior but no harm, continue on ..")
+	}
 	return nil
 }
 
