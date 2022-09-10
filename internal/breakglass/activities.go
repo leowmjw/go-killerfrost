@@ -39,6 +39,8 @@ func (b Bastion) AddToRole(userName, roleName string) error {
 	//if err != nil {
 	//	return err
 	//}
+	// DEBUG
+	fmt.Println("AddToRole/PG:", b.PGConnConfig.ConnString())
 	conn, cerr := pgx.ConnectConfig(context.Background(), b.PGConnConfig)
 	if cerr != nil {
 		return cerr
@@ -78,6 +80,7 @@ func (b Bastion) RemoveFromRole(userName, roleName string) error {
 	//if err != nil {
 	//	return err
 	//}
+	fmt.Println("RemoveFromRole/PG:", b.PGConnConfig.ConnString())
 	conn, cerr := pgx.ConnectConfig(context.Background(), b.PGConnConfig)
 	if cerr != nil {
 		return cerr

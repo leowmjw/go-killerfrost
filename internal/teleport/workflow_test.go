@@ -39,7 +39,7 @@ func TestBreakGlassWorkflow(t *testing.T) {
 			}, 50 * time.Millisecond},
 			{"breakglass", BreakGlassSignal{
 				Action: BG_OPS_DUMP,
-			}, 100 * time.Millisecond},
+			}, 10 * time.Second},
 		}}, false},
 		{"happy path rejected", args{callbacks: []signal{
 			{"breakglass", BreakGlassSignal{
@@ -53,7 +53,7 @@ func TestBreakGlassWorkflow(t *testing.T) {
 			}, 50 * time.Millisecond},
 			{"breakglass", BreakGlassSignal{
 				Action: BG_OPS_DUMP,
-			}, 100 * time.Millisecond},
+			}, 10 * time.Second},
 		}}, false},
 	}
 	// Only need to set once ..
