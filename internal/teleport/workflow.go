@@ -23,6 +23,7 @@ const (
 const (
 	TaskQueue  = "breakglass.queue"
 	SignalName = "breakglass"
+	TestWFID   = "backend"
 )
 
 type BreakGlassSignal struct {
@@ -57,6 +58,8 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 	if nerr != nil {
 		return nerr
 	}
+	fmt.Println("First time init ...")
+	spew.Dump(b.PGConnConfig)
 
 	var bgsig BreakGlassSignal
 	recv := workflow.GetSignalChannel(ctx, SignalName)
@@ -93,6 +96,8 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 			}
 			bgs.Status = BGS_PENDING
 			fmt.Println("Set status to PENDING")
+			spew.Dump(b.PGConnConfig)
+
 			continue
 		case BG_REQUEST_REJECTED:
 			if bgs.Status != BGS_PENDING {
@@ -106,6 +111,9 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 				fmt.Println("BAD SIG BG_REQUEST_APPROVED for STATUS: ", bgs.Status, " ignoring ..")
 				continue
 			}
+			fmt.Println("APPROVED ..")
+			spew.Dump(b.PGConnConfig)
+
 			// Extract userName + roleName from signaml..
 			fmt.Println("RAW_DATA received .. ")
 			spew.Dump(bgsig.Body)
@@ -127,6 +135,8 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 // ApprovedLifeCycle just factor out what happens once approval given; cleaner ..
 func ApprovedLifeCycle(ctx workflow.Context, b breakglass.Bastion, userName, roleName string) error {
 	fmt.Println("Inside ApprovedLifeCycle .. ")
+	spew.Dump(b.PGConnConfig)
+
 	fmt.Println("TIME_START: ", workflow.Now(ctx))
 	ao := workflow.ActivityOptions{
 		TaskQueue:           TaskQueue,
@@ -138,7 +148,7 @@ func ApprovedLifeCycle(ctx workflow.Context, b breakglass.Bastion, userName, rol
 	ctx2 = workflow.WithActivityOptions(ctx2, ao)
 
 	// With an Approve; have a closing timer
-	addf := workflow.ExecuteActivity(ctx2, b.AddToRole, userName, roleName)
+	addf := workflow.ExecuteActivity(ctx2, b.AddToRole, b.PGConnConfig.ConnString(), userName, roleName)
 	adderr := addf.Get(ctx, nil)
 	if adderr != nil {
 		fmt.Println("ERR: AddToRole")
@@ -149,12 +159,12 @@ func ApprovedLifeCycle(ctx workflow.Context, b breakglass.Bastion, userName, rol
 	// Sleep now ..
 	fmt.Println("Now call timer ....")
 	// Call the waiting handler ..
-	serr := workflow.Sleep(ctx, time.Minute)
+	serr := workflow.Sleep(ctx, time.Second*15)
 	if serr != nil {
 		// is this fatal?
 		return serr
 	}
-	f := workflow.ExecuteActivity(ctx2, b.RemoveFromRole, userName, roleName)
+	f := workflow.ExecuteActivity(ctx2, b.RemoveFromRole, b.PGConnConfig.ConnString(), userName, roleName)
 	err := f.Get(ctx, nil)
 	if err != nil {
 		spew.Dump(err)

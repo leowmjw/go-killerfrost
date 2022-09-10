@@ -43,10 +43,10 @@ func main() {
 
 func startWorkflow(c client.Client) {
 	wfr, err := c.ExecuteWorkflow(context.Background(), client.StartWorkflowOptions{
-		ID:        "backend",
+		ID:        teleport.TestWFID,
 		TaskQueue: teleport.TaskQueue,
 	},
-		teleport.BreakGlassWorkflow, nil,
+		teleport.BreakGlassWorkflow,
 	)
 	if err != nil {
 		fmt.Println("Unexpected ERR: ", err)

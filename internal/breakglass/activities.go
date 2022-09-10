@@ -32,16 +32,19 @@ func NewBastion(connString string) (error, Bastion) {
 		PGConnConfig: cc,
 	}
 }
-func (b Bastion) AddToRole(userName, roleName string) error {
+func (b *Bastion) AddToRole(connURL, userName, roleName string) error {
 	// GRANT s2write TO backend ;
 	// Make the connection short term ..
-	//cc, err := pgx.ParseConfig(b.URL)
-	//if err != nil {
-	//	return err
-	//}
+	cc, err := pgx.ParseConfig(connURL)
+	if err != nil {
+		return err
+	}
+	fmt.Println("INSIDE AddToRole")
+	fmt.Println("=================")
+	spew.Dump(b)
 	// DEBUG
-	fmt.Println("AddToRole/PG:", b.PGConnConfig.ConnString())
-	conn, cerr := pgx.ConnectConfig(context.Background(), b.PGConnConfig)
+	fmt.Println("AddToRole/PG:", connURL)
+	conn, cerr := pgx.ConnectConfig(context.Background(), cc)
 	if cerr != nil {
 		return cerr
 	}
@@ -73,15 +76,15 @@ func (b Bastion) AddToRole(userName, roleName string) error {
 	return nil
 }
 
-func (b Bastion) RemoveFromRole(userName, roleName string) error {
+func (b *Bastion) RemoveFromRole(connURL, userName, roleName string) error {
 	// REVOKE s2write FROM backend ;
 	// Make the connection short term ..
-	//cc, err := pgx.ParseConfig(b.URL)
-	//if err != nil {
-	//	return err
-	//}
-	fmt.Println("RemoveFromRole/PG:", b.PGConnConfig.ConnString())
-	conn, cerr := pgx.ConnectConfig(context.Background(), b.PGConnConfig)
+	cc, err := pgx.ParseConfig(connURL)
+	if err != nil {
+		return err
+	}
+	fmt.Println("RemoveFromRole/PG:", connURL)
+	conn, cerr := pgx.ConnectConfig(context.Background(), cc)
 	if cerr != nil {
 		return cerr
 	}
@@ -97,7 +100,7 @@ func (b Bastion) RemoveFromRole(userName, roleName string) error {
 	return nil
 }
 
-func (b Bastion) GetRole() (string, error) {
+func (b *Bastion) GetRole() (string, error) {
 	var roleName string
 
 	// Query Teleport role ...
@@ -107,7 +110,7 @@ func (b Bastion) GetRole() (string, error) {
 	return roleName, nil
 }
 
-func (b Bastion) RoleExists(roleName string) (bool, error) {
+func (b *Bastion) RoleExists(roleName string) (bool, error) {
 	fmt.Println("In RoleExists ..")
 	fmt.Println("CONF: ", b.PGConnConfig.ConnString())
 	conn, cerr := pgx.ConnectConfig(context.Background(), b.PGConnConfig)
