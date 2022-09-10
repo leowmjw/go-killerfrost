@@ -10,10 +10,10 @@ import (
 )
 
 type Bastion struct {
-	Identity string
-	URL      string
-	Token    string
-	PGConn   *pgx.Conn
+	Identity     string
+	URL          string
+	Token        string
+	PGConnConfig *pgx.ConnConfig
 }
 
 func NewBastion(connString string) (error, Bastion) {
@@ -22,26 +22,24 @@ func NewBastion(connString string) (error, Bastion) {
 	if err != nil {
 		return err, Bastion{}
 	}
-	conn, cerr := pgx.ConnectConfig(context.Background(), cc)
-	if cerr != nil {
-		return cerr, Bastion{}
-	}
+	//conn, cerr := pgx.ConnectConfig(context.Background(), cc)
+	//if cerr != nil {
+	//	return cerr, Bastion{}
+	//}
 	//pgx.ConnectConfig()
 	return nil, Bastion{
-		Identity: "",
-		URL:      "",
-		Token:    "",
-		PGConn:   conn,
+		URL:          connString,
+		PGConnConfig: cc,
 	}
 }
 func (b Bastion) AddToRole(userName, roleName string) error {
 	// GRANT s2write TO backend ;
 	// Make the connection short term ..
-	cc, err := pgx.ParseConfig(b.URL)
-	if err != nil {
-		return err
-	}
-	conn, cerr := pgx.ConnectConfig(context.Background(), cc)
+	//cc, err := pgx.ParseConfig(b.URL)
+	//if err != nil {
+	//	return err
+	//}
+	conn, cerr := pgx.ConnectConfig(context.Background(), b.PGConnConfig)
 	if cerr != nil {
 		return cerr
 	}
@@ -76,11 +74,11 @@ func (b Bastion) AddToRole(userName, roleName string) error {
 func (b Bastion) RemoveFromRole(userName, roleName string) error {
 	// REVOKE s2write FROM backend ;
 	// Make the connection short term ..
-	cc, err := pgx.ParseConfig(b.URL)
-	if err != nil {
-		return err
-	}
-	conn, cerr := pgx.ConnectConfig(context.Background(), cc)
+	//cc, err := pgx.ParseConfig(b.URL)
+	//if err != nil {
+	//	return err
+	//}
+	conn, cerr := pgx.ConnectConfig(context.Background(), b.PGConnConfig)
 	if cerr != nil {
 		return cerr
 	}
@@ -108,9 +106,15 @@ func (b Bastion) GetRole() (string, error) {
 
 func (b Bastion) RoleExists(roleName string) (bool, error) {
 	fmt.Println("In RoleExists ..")
-	fmt.Println("CONF: ", b.PGConn.Config().ConnString())
+	fmt.Println("CONF: ", b.PGConnConfig.ConnString())
+	conn, cerr := pgx.ConnectConfig(context.Background(), b.PGConnConfig)
+	if cerr != nil {
+		return false, cerr
+	}
+	defer conn.Close(context.Background())
+
 	// SET ROLE s2write
-	_, err := b.PGConn.Exec(context.Background(), fmt.Sprintf("SET ROLE %s", roleName))
+	_, err := conn.Exec(context.Background(), fmt.Sprintf("SET ROLE %s", roleName))
 	if err != nil {
 		// If want to be more specific?
 		var pgerr *pgconn.PgError
@@ -124,7 +128,7 @@ func (b Bastion) RoleExists(roleName string) (bool, error) {
 	}
 	//fmt.Println("ROWS: ", ct.RowsAffected())
 	// Log out the current user .. diff from session!
-	cs, xerr := b.PGConn.Query(context.Background(), "SELECT current_user, session_user")
+	cs, xerr := conn.Query(context.Background(), "SELECT current_user, session_user")
 	if xerr != nil {
 		spew.Dump(xerr)
 		return false, xerr
@@ -141,10 +145,6 @@ func (b Bastion) RoleExists(roleName string) (bool, error) {
 	// If exec after a defer; conn will be busy ..
 	//defer cs.Close()
 	cs.Close()
-	// If role exist and have permission by session ..
-
-	// If role exist but NO permission by session
-
-	// If does not exist
-	return false, nil
+	// If get this far; role exist!
+	return true, nil
 }

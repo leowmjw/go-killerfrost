@@ -1,116 +1,52 @@
 package breakglass
 
 import (
-	"context"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/stretchr/testify/require"
 	"testing"
-
-	"github.com/jackc/pgx/v5/pgxtest"
 )
 
 func TestRoleExistence(t *testing.T) {
 	// Setup testcontainers?
-	b := Bastion{
-		Identity: "",
-		URL:      "",
-		Token:    "",
+	connString := "postgres://foo:password@127.0.0.1:5432/myterraform"
+	err, b := NewBastion(connString)
+	if err != nil {
+		t.Fatal(err)
 	}
-	// Setup PG
-	defaultConnTestRunner := pgxtest.DefaultConnTestRunner()
-	//connString := "postgres://foo:password@127.0.0.1:5432/myterraform"
-	//conn, err := pgx.Connect(context.Background(), connString)
-	//b.PGConn = conn
-	//if err != nil {
-	//	t.Fatalf("ERR: %v", err)
-	//}
-	defaultConnTestRunner.CreateConfig = func(ctx context.Context, t testing.TB) *pgx.ConnConfig {
-		//	// connection string: postgres://foo:password@127.0.0.1:5432/myterraform
-		//	//config, err := pgx.ParseConfig(os.Getenv("TEST_DATABASE"))
-		//	connString := "postgres://foo:password@127.0.0.1:5432/myterraform"
-		connString := "postgres://foo:password@127.0.0.1:5432/myterraform"
-		pgx.Connect(context.Background(), connString)
-		config, err := pgx.ParseConfig(connString)
-		require.NoError(t, err)
+	var exist bool
+	var xerr error
 
-		config.OnNotice = func(_ *pgconn.PgConn, n *pgconn.Notice) {
-			t.Logf("PostgreSQL %s: %s", n.Severity, n.Message)
-		}
-		return config
+	exist, xerr = b.RoleExists("app_admin_role")
+	// Expect err
+	if xerr == nil {
+		t.Error("EXPECTED error!")
 	}
-	//b.PGConn = defaultConnTestRunner.CreateConfig(context.Background(), t)
+	// If the role does not exist; even if no permission
+	// ERROR:  role "s2read_2" does not exist
+	exist, xerr = b.RoleExists("s2read_2")
+	// Expect err
+	if xerr == nil {
+		t.Error("EXPECTED error!")
+	}
+	if exist {
+		t.Error("Expected role s2read_2 NOT exists!")
+	}
 
-	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
-		b.PGConn = conn
-		// Assume is a powerful admin of DB role minimum; could be superuser ..
-		// If role already exist; and try to create and succeed
-		// If role exist but no permission to assume ..
-		// ERROR:  permission denied to set role "app_admin_role"
-		b.RoleExists("app_admin_role")
-		// If the role does not exist; even if no permission
-		// ERROR:  role "s2read_2" does not exist
-		b.RoleExists("s2read_2")
-
-		b.RoleExists("s2admin")
-	})
-
-	t.Fail()
-}
-
-func TestHappyPathPostgres(t *testing.T) {
-	// Revoke any existing role
-	// Add new role
-	// Set and confirm it is, SET ROLE <role> ; SET ROLE NONE ; /.
-	/* WHEN NOT set sessiosn
-	myterraform=> SELECT session_user;
-	 session_user
-	--------------
-	 backend
-	(1 row)
-
-	myterraform=> SELECT current_user;
-	 current_user
-	--------------
-	 backend
-	(1 row)
-
-	myterraform=> SELECT current_setting('role');
-	 current_setting
-	-----------------
-	 none
-	(1 row)
-	*/
-
-	/* When have roles
-	SET ROLE s2admin
-	myterraform=> SELECT current_user;
-	 current_user
-	--------------
-	 s2admin
-	(1 row)
-
-	myterraform=> SELECT session_user;
-	 session_user
-	--------------
-	 foo
-	(1 row)
-
-	myterraform=> SELECT current_setting('role');
-	 current_setting
-	-----------------
-	 s2admin
-	(1 row)
-	*/
+	exist, xerr = b.RoleExists("s2admin")
+	if xerr != nil {
+		t.Fail()
+	}
+	if !exist {
+		t.Error("Expected role s2admin exists!")
+	}
 }
 
 func TestBastion_RemoveFromRole(t *testing.T) {
 	t.Parallel()
 	type fields struct {
-		Identity string
-		URL      string
-		Token    string
-		PGConn   *pgx.Conn
+		Identity     string
+		URL          string
+		Token        string
+		PGConnConfig *pgx.ConnConfig
 	}
 	type args struct {
 		userName string
@@ -143,11 +79,9 @@ func TestBastion_RemoveFromRole(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bastion{
-				Identity: tt.fields.Identity,
-				URL:      tt.fields.URL,
-				Token:    tt.fields.Token,
-				PGConn:   tt.fields.PGConn,
+			nerr, b := NewBastion(tt.fields.URL)
+			if nerr != nil {
+				t.Fatal(nerr)
 			}
 			if err := b.RemoveFromRole(tt.args.userName, tt.args.roleName); (err != nil) != tt.wantErr {
 				t.Errorf("RemoveFromRole() error = %v, wantErr %v", err, tt.wantErr)
@@ -159,10 +93,10 @@ func TestBastion_RemoveFromRole(t *testing.T) {
 func TestBastion_AddToRole(t *testing.T) {
 	t.Parallel()
 	type fields struct {
-		Identity string
-		URL      string
-		Token    string
-		PGConn   *pgx.Conn
+		Identity     string
+		URL          string
+		Token        string
+		PGConnConfig *pgx.ConnConfig
 	}
 	type args struct {
 		userName string
@@ -195,11 +129,9 @@ func TestBastion_AddToRole(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := Bastion{
-				Identity: tt.fields.Identity,
-				URL:      tt.fields.URL,
-				Token:    tt.fields.Token,
-				PGConn:   tt.fields.PGConn,
+			nerr, b := NewBastion(tt.fields.URL)
+			if nerr != nil {
+				t.Fatal(nerr)
 			}
 			// Full integration test, is it better to have func attached?
 			// pre, post? no rollback .. commit all the way!
