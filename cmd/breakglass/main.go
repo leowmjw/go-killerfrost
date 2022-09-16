@@ -28,12 +28,25 @@ func run() int {
 	// TODO: How to check if the process is done; and dumped .. and not started ..
 	//c.GetWorkflow(context.Background(), wfID, "")
 	// Signal to kick off the process for access ..
-	serr := c.SignalWorkflow(context.Background(), wfID, "",
+	wfr, serr := c.SignalWithStartWorkflow(context.Background(), wfID,
 		teleport.SignalName,
 		teleport.BreakGlassSignal{
 			Action: teleport.BG_REQUEST_ACCESS,
 			Body:   json.RawMessage(`{"content": "dood"}`),
-		})
+		},
+		client.StartWorkflowOptions{
+			ID:        teleport.TestWFID,
+			TaskQueue: teleport.TaskQueue,
+		},
+		teleport.BreakGlassWorkflow,
+	)
+	fmt.Println("WID:", wfr.GetID(), " RID:", wfr.GetRunID())
+	//serr := c.SignalWorkflow(context.Background(), wfID, "",
+	//	teleport.SignalName,
+	//	teleport.BreakGlassSignal{
+	//		Action: teleport.BG_REQUEST_ACCESS,
+	//		Body:   json.RawMessage(`{"content": "dood"}`),
+	//	})
 	if serr != nil {
 		fmt.Println("ERR: BG_REQUEST_ACCESS")
 		spew.Dump(serr)

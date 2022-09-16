@@ -27,13 +27,16 @@ func main() {
 	go startWorkflow(c)
 
 	// How to avoid this; useless ..
-	//berr, b := breakglass.NewBastion("")
-	//if berr != nil {
-	//	panic(berr)
-	//}
+	berr, b := breakglass.NewBastion("postgres://foo:password@127.0.0.1:5432/myterraform")
+	if berr != nil {
+		panic(berr)
+	}
+
 	w.RegisterWorkflow(teleport.BreakGlassWorkflow)
-	w.RegisterActivity(b.AddToRole)
-	w.RegisterActivity(b.RemoveFromRole)
+	w.RegisterActivity(&b) // If register the whole struct; all the  method + data are passed
+	// Below is how would be done traditionally
+	//w.RegisterActivity(b.AddToRole)
+	//w.RegisterActivity(b.RemoveFromRole)
 
 	rerr := w.Run(worker.InterruptCh())
 	if rerr != nil {
