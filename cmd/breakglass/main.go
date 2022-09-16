@@ -1,7 +1,7 @@
 package main
 
 import (
-	"app/internal/teleport"
+	"app/internal/breakglass"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -24,21 +24,19 @@ func run() int {
 		panic(err)
 	}
 	// Reusable workflowID; should be use controllable; within validated list?
-	wfID := teleport.TestWFID
-	// TODO: How to check if the process is done; and dumped .. and not started ..
-	//c.GetWorkflow(context.Background(), wfID, "")
-	// Signal to kick off the process for access ..
+	wfID := breakglass.TestWFID
+	// Signal to kick off the process for access .. start if completed ..
 	wfr, serr := c.SignalWithStartWorkflow(context.Background(), wfID,
-		teleport.SignalName,
-		teleport.BreakGlassSignal{
-			Action: teleport.BG_REQUEST_ACCESS,
+		breakglass.SignalName,
+		breakglass.Signal{
+			Action: breakglass.BG_REQUEST_ACCESS,
 			Body:   json.RawMessage(`{"content": "dood"}`),
 		},
 		client.StartWorkflowOptions{
-			ID:        teleport.TestWFID,
-			TaskQueue: teleport.TaskQueue,
+			ID:        breakglass.TestWFID,
+			TaskQueue: breakglass.TaskQueue,
 		},
-		teleport.BreakGlassWorkflow,
+		breakglass.Workflow,
 	)
 	fmt.Println("WID:", wfr.GetID(), " RID:", wfr.GetRunID())
 	//serr := c.SignalWorkflow(context.Background(), wfID, "",
@@ -55,9 +53,9 @@ func run() int {
 	// SImulate approve; reject ..
 	time.Sleep(time.Second * 1)
 	serr = c.SignalWorkflow(context.Background(), wfID, "",
-		teleport.SignalName,
-		teleport.BreakGlassSignal{
-			Action: teleport.BG_REQUEST_APPROVED,
+		breakglass.SignalName,
+		breakglass.Signal{
+			Action: breakglass.BG_REQUEST_APPROVED,
 			Body: json.RawMessage(`{
 	"userName": "backend",
 	"roleName": "s2read"
@@ -70,9 +68,9 @@ func run() int {
 	time.Sleep(time.Second * 15)
 	// Simulate pending requests queue
 	serr = c.SignalWorkflow(context.Background(), wfID, "",
-		teleport.SignalName,
-		teleport.BreakGlassSignal{
-			Action: teleport.BG_OPS_DUMP,
+		breakglass.SignalName,
+		breakglass.Signal{
+			Action: breakglass.BG_OPS_DUMP,
 			Body:   nil,
 		})
 	if serr != nil {

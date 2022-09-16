@@ -32,19 +32,19 @@ func NewBastion(connString string) (error, Bastion) {
 		PGConnConfig: cc,
 	}
 }
-func (b Bastion) AddToRole(connURL, userName, roleName string) error {
+func (b Bastion) AddToRole(userName, roleName string) error {
 	// GRANT s2write TO backend ;
 	// Make the connection short term ..
-	cc, err := pgx.ParseConfig(connURL)
-	if err != nil {
-		return err
-	}
+	//cc, err := pgx.ParseConfig(connURL)
+	//if err != nil {
+	//	return err
+	//}
 	fmt.Println("INSIDE AddToRole")
 	fmt.Println("=================")
-	spew.Dump(b)
-	// DEBUG
-	fmt.Println("AddToRole/PG:", connURL)
-	conn, cerr := pgx.ConnectConfig(context.Background(), cc)
+	//spew.Dump(b)
+	//// DEBUG
+	//fmt.Println("AddToRole/PG:", connURL)
+	conn, cerr := pgx.ConnectConfig(context.Background(), b.PGConnConfig)
 	if cerr != nil {
 		return cerr
 	}
@@ -76,15 +76,17 @@ func (b Bastion) AddToRole(connURL, userName, roleName string) error {
 	return nil
 }
 
-func (b Bastion) RemoveFromRole(connURL, userName, roleName string) error {
+func (b Bastion) RemoveFromRole(userName, roleName string) error {
 	// REVOKE s2write FROM backend ;
 	// Make the connection short term ..
-	cc, err := pgx.ParseConfig(connURL)
-	if err != nil {
-		return err
-	}
-	fmt.Println("RemoveFromRole/PG:", connURL)
-	conn, cerr := pgx.ConnectConfig(context.Background(), cc)
+	//cc, err := pgx.ParseConfig(connURL)
+	//if err != nil {
+	//	return err
+	//}
+	fmt.Println("INSIDE RemoveFromRole")
+	fmt.Println("=================")
+	//fmt.Println("RemoveFromRole/PG:", connURL)
+	conn, cerr := pgx.ConnectConfig(context.Background(), b.PGConnConfig)
 	if cerr != nil {
 		return cerr
 	}

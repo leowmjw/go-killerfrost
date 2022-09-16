@@ -9,44 +9,44 @@ import (
 	"time"
 )
 
-type BreakGlassWorkAction int
+type ProxyAccessWorkAction int
 
 const (
-	BG_UNKNOWN BreakGlassWorkAction = iota
-	BG_OPS_RESTORE
-	BG_OPS_DUMP
-	BG_REQUEST_ACCESS
-	BG_REQUEST_APPROVED
-	BG_REQUEST_REJECTED
+	PA_NOOPS ProxyAccessWorkAction = iota
+	PA_OPS_RESTORE
+	PA_OPS_DUMP
+	PA_REQUEST_ACCESS
+	PA_REQUEST_APPROVED
+	PA_REQUEST_REJECTED
 )
 
 const (
-	TaskQueue  = "breakglass.queue"
-	SignalName = "breakglass"
-	TestWFID   = "backend"
+	TaskQueue  = "proxyaccess.queue"
+	SignalName = "proxyaccess"
+	TestWFID   = "xxxyy"
 )
 
-type BreakGlassSignal struct {
-	Action BreakGlassWorkAction
+type ProxyAccessSignal struct {
+	Action ProxyAccessWorkAction
 	Body   json.RawMessage
 }
 
-type BreakGlassStatus int
+type ProxyAccessStatus int
 
 const (
-	BGS_INITIAL BreakGlassStatus = iota
-	BGS_PENDING
-	BGS_APPROVED
+	PAS_INITIAL ProxyAccessStatus = iota
+	PAS_PENDING
+	PAS_APPROVED
 )
 
-type BreakGlassState struct {
+type ProxyAccessState struct {
 	ID     string // OIDC Username == Github username/identity?
-	Status BreakGlassStatus
+	Status ProxyAccessStatus
 }
 
-// BreakGlassWorkflow WorkflowID will be the OIDC identity
-func BreakGlassWorkflow(ctx workflow.Context) error {
-	var bgs BreakGlassState
+// ProxyAccessWorkflow WorkflowID will be the OIDC identity
+func ProxyAccessWorkflow(ctx workflow.Context) error {
+	var bgs ProxyAccessState
 	bgs.ID = workflow.GetInfo(ctx).WorkflowExecution.ID
 	// DEBUG
 	//spew.Dump(bgs)
@@ -58,10 +58,11 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 	if nerr != nil {
 		return nerr
 	}
-	fmt.Println("First time init ...")
-	spew.Dump(b.PGConnConfig)
+	// DEBUG
+	//fmt.Println("First time init ...")
+	//spew.Dump(b.PGConnConfig)
 
-	var bgsig BreakGlassSignal
+	var bgsig ProxyAccessSignal
 	recv := workflow.GetSignalChannel(ctx, SignalName)
 	for {
 		more := recv.Receive(ctx, &bgsig)
@@ -72,10 +73,10 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 		//spew.Dump(bgsig)
 
 		// First cut StateMachine:
-		// 	BGS_INITIAL --> SIG<BG_REQUEST_ACCESS> --> BGS_PENDING
-		//		BGS_PENDING --> SIG<BG_REQUEST_APPROVED> --> BGS_APPROVED
-		//		BGS_PENDING --> SIG<BG_REQUEST_REJECTED> --> BGS_INITIAL
-		//			BGS_APPROVED --> TimerDone --> BGS_INITIAL
+		// 	PAS_INITIAL --> SIG<PA_REQUEST_ACCESS> --> PAS_PENDING
+		//		PAS_PENDING --> SIG<PA_REQUEST_APPROVED> --> PAS_APPROVED
+		//		PAS_PENDING --> SIG<PA_REQUEST_REJECTED> --> PAS_INITIAL
+		//			PAS_APPROVED --> TimerDone --> PAS_INITIAL
 		// Gets signal for RequestAccess
 
 		switch bgsig.Action {
@@ -85,34 +86,39 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 		// validate the requested timing ..
 		// Gets signal to Reject
 
-		case BG_OPS_DUMP:
+		case PA_NOOPS:
+			fmt.Println("NoOPS .. nothing to see here ..")
+			return nil
+		case PA_OPS_DUMP:
 			fmt.Println("Dumping state .... finish flow ..")
 			spew.Dump(bgs)
 			return nil
-		case BG_REQUEST_ACCESS:
-			if bgs.Status != BGS_INITIAL {
-				fmt.Println("BAD SIG BG_REQUEST_ACCESS for STATUS: ", bgs.Status, " ignoring ..")
+		case PA_REQUEST_ACCESS:
+			if bgs.Status != PAS_INITIAL {
+				fmt.Println("BAD SIG PA_REQUEST_ACCESS for STATUS: ", bgs.Status, " ignoring ..")
 				continue
 			}
-			bgs.Status = BGS_PENDING
+			bgs.Status = PAS_PENDING
 			fmt.Println("Set status to PENDING")
-			spew.Dump(b.PGConnConfig)
+			// DEBUG
+			//spew.Dump(b.PGConnConfig)
 
 			continue
-		case BG_REQUEST_REJECTED:
-			if bgs.Status != BGS_PENDING {
-				fmt.Println("BAD SIG BG_REQUEST_REJECTED for STATUS: ", bgs.Status, " ignoring ..")
+		case PA_REQUEST_REJECTED:
+			if bgs.Status != PAS_PENDING {
+				fmt.Println("BAD SIG PA_REQUEST_REJECTED for STATUS: ", bgs.Status, " ignoring ..")
 				continue
 			}
 			fmt.Println("Rejected .. rset the state")
-			bgs.Status = BGS_INITIAL
-		case BG_REQUEST_APPROVED:
-			if bgs.Status != BGS_PENDING {
-				fmt.Println("BAD SIG BG_REQUEST_APPROVED for STATUS: ", bgs.Status, " ignoring ..")
+			bgs.Status = PAS_INITIAL
+		case PA_REQUEST_APPROVED:
+			if bgs.Status != PAS_PENDING {
+				fmt.Println("BAD SIG PA_REQUEST_APPROVED for STATUS: ", bgs.Status, " ignoring ..")
 				continue
 			}
 			fmt.Println("APPROVED ..")
-			spew.Dump(b.PGConnConfig)
+			// DEBUG
+			//spew.Dump(b.PGConnConfig)
 
 			// Extract userName + roleName from signaml..
 			fmt.Println("RAW_DATA received .. ")
@@ -135,7 +141,8 @@ func BreakGlassWorkflow(ctx workflow.Context) error {
 // ApprovedLifeCycle just factor out what happens once approval given; cleaner ..
 func ApprovedLifeCycle(ctx workflow.Context, b breakglass.Bastion, userName, roleName string) error {
 	fmt.Println("Inside ApprovedLifeCycle .. ")
-	spew.Dump(b.PGConnConfig)
+	// DEBUG
+	//spew.Dump(b.PGConnConfig)
 
 	fmt.Println("TIME_START: ", workflow.Now(ctx))
 	ao := workflow.ActivityOptions{
@@ -148,7 +155,7 @@ func ApprovedLifeCycle(ctx workflow.Context, b breakglass.Bastion, userName, rol
 	ctx2 = workflow.WithActivityOptions(ctx2, ao)
 
 	// With an Approve; have a closing timer
-	addf := workflow.ExecuteActivity(ctx2, b.AddToRole, b.PGConnConfig.ConnString(), userName, roleName)
+	addf := workflow.ExecuteActivity(ctx2, b.AddToRole, userName, roleName)
 	adderr := addf.Get(ctx, nil)
 	if adderr != nil {
 		fmt.Println("ERR: AddToRole")
@@ -164,7 +171,7 @@ func ApprovedLifeCycle(ctx workflow.Context, b breakglass.Bastion, userName, rol
 		// is this fatal?
 		return serr
 	}
-	f := workflow.ExecuteActivity(ctx2, b.RemoveFromRole, b.PGConnConfig.ConnString(), userName, roleName)
+	f := workflow.ExecuteActivity(ctx2, b.RemoveFromRole, userName, roleName)
 	err := f.Get(ctx, nil)
 	if err != nil {
 		spew.Dump(err)

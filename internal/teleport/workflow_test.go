@@ -6,12 +6,12 @@ import (
 	"time"
 )
 
-func TestBreakGlassWorkflow(t *testing.T) {
+func TestProxyAccessWorkflow(t *testing.T) {
 	t.Parallel()
 
 	type signal struct {
 		name    string
-		content BreakGlassSignal
+		content ProxyAccessSignal
 		when    time.Duration
 	}
 	type args struct {
@@ -23,36 +23,36 @@ func TestBreakGlassWorkflow(t *testing.T) {
 		wantErr bool
 	}{
 		{"test dump state", args{callbacks: []signal{
-			{"breakglass", BreakGlassSignal{
-				Action: BG_OPS_DUMP,
+			{"breakglass", ProxyAccessSignal{
+				Action: PA_OPS_DUMP,
 			}, time.Millisecond},
 		}}, false},
 		{"happy path", args{callbacks: []signal{
-			{"breakglass", BreakGlassSignal{
-				Action: BG_REQUEST_ACCESS,
+			{"breakglass", ProxyAccessSignal{
+				Action: PA_REQUEST_ACCESS,
 			}, time.Millisecond},
-			{"breakglass", BreakGlassSignal{
-				Action: BG_REQUEST_ACCESS,
+			{"breakglass", ProxyAccessSignal{
+				Action: PA_REQUEST_ACCESS,
 			}, 10 * time.Millisecond},
-			{"breakglass", BreakGlassSignal{
-				Action: BG_REQUEST_APPROVED,
+			{"breakglass", ProxyAccessSignal{
+				Action: PA_REQUEST_APPROVED,
 			}, 50 * time.Millisecond},
-			{"breakglass", BreakGlassSignal{
-				Action: BG_OPS_DUMP,
+			{"breakglass", ProxyAccessSignal{
+				Action: PA_OPS_DUMP,
 			}, 10 * time.Second},
 		}}, false},
 		{"happy path rejected", args{callbacks: []signal{
-			{"breakglass", BreakGlassSignal{
-				Action: BG_REQUEST_REJECTED,
+			{"breakglass", ProxyAccessSignal{
+				Action: PA_REQUEST_REJECTED,
 			}, time.Millisecond},
-			{"breakglass", BreakGlassSignal{
-				Action: BG_REQUEST_ACCESS,
+			{"breakglass", ProxyAccessSignal{
+				Action: PA_REQUEST_ACCESS,
 			}, 10 * time.Millisecond},
-			{"breakglass", BreakGlassSignal{
-				Action: BG_REQUEST_REJECTED,
+			{"breakglass", ProxyAccessSignal{
+				Action: PA_REQUEST_REJECTED,
 			}, 50 * time.Millisecond},
-			{"breakglass", BreakGlassSignal{
-				Action: BG_OPS_DUMP,
+			{"breakglass", ProxyAccessSignal{
+				Action: PA_OPS_DUMP,
 			}, 10 * time.Second},
 		}}, false},
 	}
@@ -64,7 +64,7 @@ func TestBreakGlassWorkflow(t *testing.T) {
 			env := ts.NewTestWorkflowEnvironment()
 			// All tests should be done by 1s
 			env.SetTestTimeout(time.Second)
-			env.RegisterWorkflow(BreakGlassWorkflow)
+			env.RegisterWorkflow(ProxyAccessWorkflow)
 			// Setuo the signal simulation ..
 			for _, signal := range tt.args.callbacks {
 				// As per normal footgun :sweat:
@@ -74,7 +74,7 @@ func TestBreakGlassWorkflow(t *testing.T) {
 					env.SignalWorkflow(signal.name, signal.content)
 				}, signal.when)
 			}
-			env.ExecuteWorkflow(BreakGlassWorkflow)
+			env.ExecuteWorkflow(ProxyAccessWorkflow)
 			// Expect WF completed ..
 			if !env.IsWorkflowCompleted() {
 				t.Fail()

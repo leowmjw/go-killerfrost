@@ -2,7 +2,6 @@ package main
 
 import (
 	"app/internal/breakglass"
-	"app/internal/teleport"
 	"context"
 	"fmt"
 	"go.temporal.io/sdk/client"
@@ -19,7 +18,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	w := worker.New(c, teleport.TaskQueue, worker.Options{
+	w := worker.New(c, breakglass.TaskQueue, worker.Options{
 		EnableSessionWorker: true,
 	})
 
@@ -32,7 +31,8 @@ func main() {
 		panic(berr)
 	}
 
-	w.RegisterWorkflow(teleport.BreakGlassWorkflow)
+	//w.RegisterWorkflow(teleport.BreakGlassWorkflow)
+	w.RegisterWorkflow(breakglass.Workflow)
 	w.RegisterActivity(&b) // If register the whole struct; all the  method + data are passed
 	// Below is how would be done traditionally
 	//w.RegisterActivity(b.AddToRole)
@@ -46,10 +46,10 @@ func main() {
 
 func startWorkflow(c client.Client) {
 	wfr, err := c.ExecuteWorkflow(context.Background(), client.StartWorkflowOptions{
-		ID:        teleport.TestWFID,
-		TaskQueue: teleport.TaskQueue,
+		ID:        breakglass.TestWFID,
+		TaskQueue: breakglass.TaskQueue,
 	},
-		teleport.BreakGlassWorkflow,
+		breakglass.Workflow,
 	)
 	if err != nil {
 		fmt.Println("Unexpected ERR: ", err)
