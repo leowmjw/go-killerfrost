@@ -95,7 +95,7 @@ module "myterraform_s1" {
 
   # targetted rds
   pgadmin_user = "leow"
-  dbhost       = "localhost"
+  dbhost       = "127.0.0.1"
   dbport       = 5432
 
   # input parameters for creating database & objects inside database
@@ -115,7 +115,7 @@ module "myterraform_s2" {
 
   # targetted rds
   pgadmin_user = "leow"
-  dbhost       = "localhost"
+  dbhost       = "127.0.0.1"
   dbport       = 5432
 
   # input parameters for creating database & objects inside database

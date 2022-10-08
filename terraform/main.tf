@@ -7,14 +7,14 @@
 #######################################
 provider "postgresql" {
   alias    = "pgadm"
-  host     = "localhost"
+  host     = "127.0.0.1"
   username = "leow"
   sslmode  = "disable"
 }
 
 provider "postgresql" {
   alias    = "pgmgm"
-  host     = "localhost"
+  host     = "127.0.0.1"
   username = "leow"
   database = "myterraform"
   sslmode  = "disable"
