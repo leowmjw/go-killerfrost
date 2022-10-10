@@ -8,7 +8,7 @@ table "measurement" {
   }
   column "logdate" {
     null = false
-    type = date
+    type = timestamp
   }
   column "peaktemp" {
     null = true

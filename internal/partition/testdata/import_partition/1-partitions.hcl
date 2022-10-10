@@ -20,7 +20,7 @@ table "measurement_y2008m02" {
   }
   column "logdate" {
     null = false
-    type = date
+    type = timestamp
   }
   column "peaktemp" {
     null = true
