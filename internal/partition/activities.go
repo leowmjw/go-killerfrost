@@ -1,7 +1,7 @@
 package partition
 
 func CreateNewPartitionSlice(policy Policy) error {
-	// Copy from existing one
+	// Copy from existing parent which is active ..
 
 	// Set the constraint
 	/*

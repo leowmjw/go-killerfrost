@@ -19,16 +19,6 @@ type Policy struct {
 	UnitInMin int
 }
 
-type Status int
-
-const (
-	UNKNOWN Status = iota
-	PROCESSING
-	TRACKED
-	UNTRACKED
-	ARCHIVED
-)
-
 // DateRange is partition segment; to set constraints + range
 type DateRange struct {
 	Name    string
