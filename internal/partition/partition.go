@@ -2,6 +2,8 @@ package partition
 
 import "time"
 
+type PartitionNotFound error
+
 // Postgres 14 can detach partition without interruption
 // When inactive; detached from main partition
 // After retention time; mark for removal with humam last time review ..
@@ -18,6 +20,16 @@ const (
 type Policy struct {
 	UnitInMin int
 }
+
+type Status int
+
+const (
+	UNKNOWN Status = iota
+	WAITING
+	ATTACHED
+	DETACHED
+	ARCHIVED
+)
 
 // DateRange is partition segment; to set constraints + range
 type DateRange struct {
