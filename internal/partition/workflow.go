@@ -14,7 +14,7 @@ const (
 	PT_NOOPS PTAction = iota
 	PT_OPS_RESTORE
 	PT_OPS_DUMP
-	PT_REQUEST_ACCESS
+	PT_REQUEST_PLAN
 	PT_REQUEST_APPROVED
 	PT_REQUEST_REJECTED
 )
@@ -35,8 +35,8 @@ type PTStatus int
 
 const (
 	PT_INITIAL PTStatus = iota
-	PT_PENDING
-	PT_APPROVED
+	PT_PENDING          // Plan Pending Approval
+	PT_LOCKED           // Plan approved; locked
 	PT_HASPLAN
 	PT_APPLIED
 	PT_ARCHIVED
@@ -56,7 +56,39 @@ type PTState struct {
 
 // LifeCycleWorkflow keeps track of all the partition slices as it goes through life
 func LifeCycleWorkflow(ctx workflow.Context) error {
+	// TODO: Passed in via LifeCycleReq?
+	// If empty; and not loading from a previous state
+	// Setup X number of SmallestUnit
+	// Set current SmallestUnit as Archival
+	trackedTable := TrackedTable{
+		Schema: "s2",
+		Name:   TestWFID,
+	}
+	partitionedTable := PTState{
+		ID:     TestWFID,
+		Status: PT_INITIAL,
+	}
+	// TODO: Need to check that the target table is partition and acceptable .
+	// QUERY: For UI + actions ..
+	qerr := workflow.SetQueryHandler(ctx, SignalName, func() (string, error) {
+		ptStatus := partitionedTable.Status
+		switch ptStatus {
+		case PT_HASPLAN:
+			return "plan", nil
+		case PT_LOCKED:
+			return "locked", nil
+		default:
+			fmt.Println("UNEXPECTED: ", ptStatus)
+		}
 
+		return "unknown", nil
+	})
+	if qerr != nil {
+		fmt.Println("ERR: ", qerr)
+		spew.Dump(partitionedTable)
+		return qerr
+	}
+	// Info from LifeCycleReq?
 	type partition_slices struct {
 		Name string
 		Status
@@ -80,14 +112,6 @@ func LifeCycleWorkflow(ctx workflow.Context) error {
 	//	Status: INUSE,
 	//})
 	//heap.Pop(nil)
-
-	// If empty; and not loading from a previous state
-	// Setup X number of SmallestUnit
-	// Set current SmallestUnit as Archival
-	trackedTable := TrackedTable{
-		Schema: "s2",
-		Name:   "foobar",
-	}
 
 	if !(len(trackedTable.Ranges) > 0) {
 		// Edge case; first time just set things up ..
@@ -113,6 +137,11 @@ func LifeCycleWorkflow(ctx workflow.Context) error {
 	// Look for signal to do checks too .. on-demand ..
 	// Look for sugnal to bring back sanity in case of missing; with a plan ..
 
+	workflow.Go(ctx, func(ctx workflow.Context) {
+		for {
+			checkerLoop(ctx, &trackedTable)
+		}
+	})
 	// Loop through the actives; mark those detach + those pending
 
 	// Loop through those marked for detach; fire off activities in concurrent
@@ -145,13 +174,13 @@ func LifeCycleWorkflow(ctx workflow.Context) error {
 
 		case PT_NOOPS:
 			fmt.Println("NoOPS .. nothing to see here ..")
-			return nil
+			continue
 		case PT_OPS_DUMP:
 			spew.Dump(p)
 			fmt.Println("Dumping state .... finish flow ..")
 			spew.Dump(pts)
 			return nil
-		case PT_REQUEST_ACCESS:
+		case PT_REQUEST_PLAN:
 			//if pts.Status != PT_INITIAL {
 			//	fmt.Println("BAD SIG PA_REQUEST_ACCESS for STATUS: ", bgs.Status, " ignoring ..")
 			//	continue
@@ -194,9 +223,36 @@ func LifeCycleWorkflow(ctx workflow.Context) error {
 	return nil
 }
 
+func checkerLoop(ctx workflow.Context, tt *TrackedTable) {
+	// Find out the last run? Calculate currenttime against it?
+	// Int test: boundary == Minute; in prod: boundary == Day
+	serr := workflow.Sleep(ctx, time.Minute)
+	if serr != nil {
+		fmt.Println("CANCELED: ", serr)
+		return
+	}
+	// TODO: See if there is a gap; only when in steady state
+
+	// NOTE: This just mark things up; it will then appear
+	// in State and will need human intervention? as query?
+	timeNow := workflow.Now(ctx)
+	// DEBUG
+	//fmt.Println("TIME: ", timeNow)
+	//spew.Dump(tt)
+	// If want to change like below; need to pass in ref ..
+	tt.Name = "boo" + timeNow.String()
+	// Below not needed but if want something more sophisticated..
+	//var nextRunTime time.Time
+	//encodedNextRun := workflow.SideEffect(ctx, func(ctx workflow.Context) interface{} {
+	//	return determineNextCheckPoint(workflow.Now(ctx))
+	//
+	//})
+	//encodedNextRun.Get(&nextRunTime)
+}
+
 // determineNextCheckPoint finds next micro boundary ; if passed do now
-func determineNextCheckPoint(currentTime time.Time) (time.Time, error) {
+func determineNextCheckPoint(currentTime time.Time) time.Time {
 	// if currentTime > Now; fire it off immediately ..
 	// Dummy vakue .. if passed; do now
-	return time.Now(), nil
+	return time.Now()
 }

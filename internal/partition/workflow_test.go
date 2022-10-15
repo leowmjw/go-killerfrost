@@ -27,6 +27,14 @@ func TestLifeCycleWorkflow(t *testing.T) {
 				Action: PT_OPS_DUMP,
 			}, time.Millisecond},
 		}}, true},
+		{"test checkerloop", args{callbacks: []signal{
+			{"partition", PTSignal{
+				Action: PT_NOOPS,
+			}, time.Millisecond},
+			{"partition", PTSignal{
+				Action: PT_OPS_DUMP,
+			}, time.Minute * 5},
+		}}, true},
 	}
 	// Only need to set once ..
 	ts := testsuite.WorkflowTestSuite{}
