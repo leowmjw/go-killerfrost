@@ -27,7 +27,7 @@ const (
 	UNKNOWN Status = iota
 	WAITING
 	ATTACHED
-	DETACHED
+	DETACHING
 	ARCHIVED
 )
 

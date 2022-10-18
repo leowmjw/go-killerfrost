@@ -197,7 +197,7 @@ func LifeCycleWorkflow(ctx workflow.Context) error {
 			//	continue
 			//}
 			fmt.Println("Rejected .. rset the state")
-			//pts.Status = PT_INITIAL
+			pts.Status = PT_INITIAL
 		case PT_REQUEST_APPROVED:
 			//if pts.Status != PT_PENDING {
 			//	fmt.Println("BAD SIG PA_REQUEST_APPROVED for STATUS: ", bgs.Status, " ignoring ..")
@@ -220,6 +220,22 @@ func LifeCycleWorkflow(ctx workflow.Context) error {
 
 	}
 
+	return nil
+}
+
+// applyPlan only means an approved signal given; or manual call ..
+func applyPlan(ctx workflow.Context, tt *TrackedTable) error {
+	// TODO: Sanity check on the DB Conn??
+	for _, pt_slice := range tt.Ranges {
+		if pt_slice.Status == WAITING {
+			workflow.GoNamed(ctx, tt.Name, func(ctx workflow.Context) {
+
+			})
+		} else {
+			fmt.Println("SLICE: ", pt_slice.Name)
+			fmt.Println("STATUS: ", pt_slice.Status)
+		}
+	}
 	return nil
 }
 
@@ -248,6 +264,10 @@ func checkerLoop(ctx workflow.Context, tt *TrackedTable) {
 	//
 	//})
 	//encodedNextRun.Get(&nextRunTime)
+	ctxact := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		StartToCloseTimeout: time.Minute * 10,
+	})
+	workflow.ExecuteActivity(ctxact, PostgresDB.ArchiveDateRange)
 }
 
 // determineNextCheckPoint finds next micro boundary ; if passed do now
