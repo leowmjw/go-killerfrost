@@ -29,6 +29,7 @@ func main() {
 	// Setup the PGD connectivity
 	connString := "postgres://s2admin:password@127.0.0.1:5432/myterraform"
 	connConfig, perr := pgx.ParseConfig(connString)
+	pgx.ConnectConfig(context.Background(), connConfig)
 	if perr != nil {
 		panic(perr)
 	}

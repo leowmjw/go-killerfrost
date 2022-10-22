@@ -44,6 +44,7 @@ type TrackedTable struct {
 	Schema string
 	Name   string
 	Ranges []DateRange
+	IsTest bool
 }
 
 // Supported Partition

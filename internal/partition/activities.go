@@ -16,6 +16,11 @@ type PostgresDB struct {
 //	Go Concurrent
 //		if non-fatal-err: if already running; is unique; will not do anything; just log it
 
+// GetConfig will allow fixed info
+func (pgd PostgresDB) GetConfig() error {
+	return nil
+}
+
 func (pgd PostgresDB) CreateNewPartitionSlice(policy Policy) error {
 	conn, cerr := pgx.ConnectConfig(context.Background(), pgd.ConnConfig)
 	if cerr != nil {

@@ -1,6 +1,7 @@
 package partition
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"go.temporal.io/sdk/testsuite"
 	"testing"
 	"time"
@@ -62,6 +63,52 @@ func TestLifeCycleWorkflow(t *testing.T) {
 			// Ensure no err!
 			if xerr := env.GetWorkflowError(); xerr != nil {
 				t.Fatal(xerr)
+			}
+		})
+	}
+}
+
+func TestTrackedTable_getSliceProjection(t *testing.T) {
+	type fields struct {
+		Schema string
+		Name   string
+		Ranges []DateRange
+		IsTest bool
+	}
+	type args struct {
+		ct            time.Time
+		numProjection int
+	}
+	// Common test time .. Leap year Feb 29 23:55 ..
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{"happy #1", fields{
+			Schema: "",
+			Name:   "",
+			Ranges: nil,
+			IsTest: true,
+		}, args{
+			ct:            time.Now(),
+			numProjection: 3,
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tt := &TrackedTable{
+				Schema: tc.fields.Schema,
+				Name:   tc.fields.Name,
+				Ranges: tc.fields.Ranges,
+				IsTest: tc.fields.IsTest,
+			}
+			tt.getSliceProjection(tc.args.ct, tc.args.numProjection)
+			// Check if the projection is correct ..
+			if diff := cmp.Diff(tt.Ranges, []DateRange{
+				{Name: "bob", MinDate: "2022"},
+			}); diff != "" {
+				t.Fatalf("want,got: %s", diff)
 			}
 		})
 	}

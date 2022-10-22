@@ -63,6 +63,7 @@ func LifeCycleWorkflow(ctx workflow.Context) error {
 	trackedTable := TrackedTable{
 		Schema: "s2",
 		Name:   TestWFID,
+		IsTest: true,
 	}
 	partitionedTable := PTState{
 		ID:     TestWFID,
@@ -226,6 +227,12 @@ func LifeCycleWorkflow(ctx workflow.Context) error {
 // applyPlan only means an approved signal given; or manual call ..
 func applyPlan(ctx workflow.Context, tt *TrackedTable) error {
 	// TODO: Sanity check on the DB Conn??
+	// Check if the parent table exists; if not create it ..
+	ctxact := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		StartToCloseTimeout: time.Minute * 10,
+	})
+	workflow.ExecuteActivity(ctxact, PostgresDB.ArchiveDateRange)
+
 	for _, pt_slice := range tt.Ranges {
 		if pt_slice.Status == WAITING {
 			workflow.GoNamed(ctx, tt.Name, func(ctx workflow.Context) {
@@ -244,10 +251,12 @@ func checkerLoop(ctx workflow.Context, tt *TrackedTable) {
 	// Int test: boundary == Minute; in prod: boundary == Day
 	serr := workflow.Sleep(ctx, time.Minute)
 	if serr != nil {
+		spew.Dump(serr)
 		fmt.Println("CANCELED: ", serr)
 		return
 	}
 	// TODO: See if there is a gap; only when in steady state
+	// Always maintain x number of slices in the future
 
 	// NOTE: This just mark things up; it will then appear
 	// in State and will need human intervention? as query?
@@ -268,6 +277,97 @@ func checkerLoop(ctx workflow.Context, tt *TrackedTable) {
 		StartToCloseTimeout: time.Minute * 10,
 	})
 	workflow.ExecuteActivity(ctxact, PostgresDB.ArchiveDateRange)
+}
+
+// getMajorTimeBoundary - for Test - Day (31d); for Prod - Year (2xyz)
+//func (tt *TrackedTable) getMajorTimeBoundary(currentTime time.Time) int {
+//	if tt.IsTest {
+//		return currentTime.Day()
+//	}
+//	// Handle rollover
+//	return currentTime.Year()
+//}
+
+// getMinorTimeBoundary - for Test - Hour (24h); for Prod - Month (12m)
+//func (tt *TrackedTable) getMinorTimeBoundary(currentTime time.Time) int {
+//	if tt.IsTest {
+//		return currentTime.Hour()
+//	}
+//	return int(currentTime.Month())
+//}
+
+func (tt *TrackedTable) getSliceProjection(ct time.Time, numProjection int) {
+	currentMinorIndex := func() int {
+		if tt.IsTest {
+			return ct.Hour()
+		}
+		return int(ct.Month())
+	}()
+	currentMajorIndex := func() int {
+		if tt.IsTest {
+			return ct.Day()
+		}
+		return ct.Year()
+	}()
+	fmt.Println("MAJOR: ", currentMajorIndex, " MINOR: ", currentMinorIndex)
+	var nt []TrackedTable
+	// Project numProjection into future ..
+	for i := 0; i < numProjection; i++ {
+		// Rules for the boundary will be different if it is Test ..
+		// If those index does not exist; add!
+		// If those are WAITING .. do nothing ..
+		if tt.IsTest {
+
+		} else {
+
+		}
+	}
+	// if temp > 0; then can append ..
+	if len(nt) > 0 {
+		fmt.Println("APPEND these ...")
+		spew.Dump(nt)
+	} else {
+		fmt.Println("NOTHING to DO ....")
+	}
+	return
+}
+
+func determineBufferNeeded(ctx workflow.Context, policy Policy, tt *TrackedTable) error {
+	// Where are we now; inclusive
+	// slice it out of tt.Ranges; what remains?
+	var currentTime time.Time
+	encodedCurrent := workflow.SideEffect(ctx, func(ctx workflow.Context) interface{} {
+		return workflow.Now(ctx)
+	})
+	err := encodedCurrent.Get(&currentTime)
+	if err != nil {
+		fmt.Println("ERR: ", err)
+		return err
+	}
+	// measurement_y2006m02
+	// YYYY-MM/DD e.g. 2022-02/30
+	// DD-HH/mm e.g. 31-24/55
+	boundaryKey := fmt.Sprintf("y%4dm%2d", currentTime.Day(), currentTime.Hour()) // 01-24 // MONTH
+	fmt.Println("KEY: ", boundaryKey)
+	// Policy will determine unit and how far ahead needed
+	// for now we hard code
+	bufferPolicy := 3
+	slicesToCreate := bufferPolicy
+	for _, pt_slice := range tt.Ranges {
+		if pt_slice.Status == WAITING {
+			slicesToCreate--
+		} else {
+			fmt.Println("SLICE: ", pt_slice.Name)
+			fmt.Println("STATUS: ", pt_slice.Status)
+			// Nothng to do here ,.
+		}
+	}
+
+	if slicesToCreate > 0 {
+		// Appedn the remainig from now ..
+	}
+	// Mark WAITING until Buffer filled
+	return nil
 }
 
 // determineNextCheckPoint finds next micro boundary ; if passed do now
