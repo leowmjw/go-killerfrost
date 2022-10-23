@@ -309,13 +309,40 @@ func (tt *TrackedTable) getSliceProjection(ct time.Time, numProjection int) {
 		}
 		return ct.Year()
 	}()
-	// Iterate till see currentMajor + currentMinor; or if it finish ..
+	// Iterate till see currentMajor + currentMinor; split at this seam
 	// if finish with nothing use the full numProject; if found -1
+	var startIndex, seamIndex int
+	//var leftOver []DateRange
+	if len(tt.Ranges) > 0 {
+		labelName := fmt.Sprintf("y%04dm%02d", currentMajorIndex, currentMinorIndex)
+		// then iterate through to find the seamIndex
+		for si, v := range tt.Ranges {
+			if seamIndex > 0 {
+				// Found the currentSeam
+				// Can check rest of items now ..
+				numProjection--
+				continue // next loop ..
+			}
+			// Default is to look for the seam ..
+			if v.Name == labelName {
+				seamIndex = si
+				startIndex = 1
+				break
+			}
+		}
+		// then do slice; else it is full range
+		fmt.Println("SEAMIDX: ", seamIndex)
+		// extract slice sarting wirth seamIndex till len(slice)
+		//leftOver = tt.Ranges[seamIndex:len(tt.Ranges)]
+		//// DEBUG ...
+		//spew.Dump(leftOver)
+	}
 	// DEBUG
 	//fmt.Println("MAJOR: ", currentMajorIndex, " MINOR: ", currentMinorIndex)
 	var nr []DateRange
+	var labelName string
 	// Project numProjection into future ..
-	for i := 0; i < numProjection; i++ {
+	for i := startIndex; i < numProjection; i++ {
 		// Rules for the boundary will be different if it is Test ..
 		// If those index does not exist; add!
 		// If those are WAITING .. do nothing ..
@@ -323,14 +350,27 @@ func (tt *TrackedTable) getSliceProjection(ct time.Time, numProjection int) {
 		if tt.IsTest {
 			finalMajorIndex = currentMajorIndex
 			finalMinorIndex = (currentMinorIndex + i) % 24
-			nr = append(nr, DateRange{
-				Name:    fmt.Sprintf("y%04dm%02d", finalMajorIndex, finalMinorIndex),
-				MinDate: "2022",
-				Status:  WAITING,
-			})
+			if finalMinorIndex < currentMinorIndex {
+				finalMajorIndex = (finalMajorIndex + 1) % 31
+			}
 		} else {
-
+			finalMajorIndex = currentMajorIndex
+			finalMinorIndex = (currentMinorIndex + i) % 12 //Month
+			if finalMinorIndex == 0 {
+				finalMinorIndex++ // Month starts with 1
+			}
+			if finalMinorIndex < currentMinorIndex {
+				finalMajorIndex++ // Year unlikely to run out for a while ..
+			}
 		}
+		labelName = fmt.Sprintf("y%04dm%02d", finalMajorIndex, finalMinorIndex)
+		// Figure iut between test + prod; append if needed
+		// Decide if already WAIT/ATTACHED?
+		nr = append(nr, DateRange{
+			Name:    labelName,
+			MinDate: "2022",
+			Status:  WAITING,
+		})
 	}
 	// if temp > 0; then can append ..
 	if len(nr) > 0 {

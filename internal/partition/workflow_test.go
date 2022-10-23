@@ -87,7 +87,7 @@ func TestTrackedTable_getSliceProjection(t *testing.T) {
 		fields fields
 		args   args
 	}{
-		{"happy #1", fields{
+		{"happy isTest #1", fields{
 			Schema: "s1",
 			Name:   "measurement",
 			IsTest: true,
@@ -96,16 +96,16 @@ func TestTrackedTable_getSliceProjection(t *testing.T) {
 			numProjection: 3,
 			expectedRanges: []DateRange{
 				{Name: "y0029m23", MinDate: "2022", Status: WAITING},
-				{Name: "y0029m00", MinDate: "2022", Status: WAITING},
-				{Name: "y0029m01", MinDate: "2022", Status: WAITING},
+				{Name: "y0030m00", MinDate: "2022", Status: WAITING},
+				{Name: "y0030m01", MinDate: "2022", Status: WAITING},
 			},
 		}},
-		{"happy existing #2", fields{
+		{"happy existing isTest #2", fields{
 			Schema: "s1",
 			Name:   "measurement",
 			Ranges: []DateRange{
 				{Name: "y0029m23", MinDate: "2022", Status: ATTACHED},
-				{Name: "y0029m00", MinDate: "2022", Status: WAITING},
+				{Name: "y0030m00", MinDate: "2022", Status: WAITING},
 			},
 			IsTest: true,
 		}, args{
@@ -113,8 +113,8 @@ func TestTrackedTable_getSliceProjection(t *testing.T) {
 			numProjection: 3,
 			expectedRanges: []DateRange{
 				{Name: "y0029m23", MinDate: "2022", Status: ATTACHED},
-				{Name: "y0029m00", MinDate: "2022", Status: WAITING},
-				{Name: "y0029m01", MinDate: "2022", Status: WAITING},
+				{Name: "y0030m00", MinDate: "2022", Status: WAITING},
+				{Name: "y0030m01", MinDate: "2022", Status: WAITING},
 			},
 		}},
 	}
