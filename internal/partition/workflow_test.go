@@ -76,23 +76,46 @@ func TestTrackedTable_getSliceProjection(t *testing.T) {
 		IsTest bool
 	}
 	type args struct {
-		ct            time.Time
-		numProjection int
+		currentTime    time.Time
+		numProjection  int
+		expectedRanges []DateRange
 	}
 	// Common test time .. Leap year Feb 29 23:55 ..
+	leapYearFeb := time.Date(2020, time.February, 29, 23, 55, 0, 0, time.UTC)
 	tests := []struct {
 		name   string
 		fields fields
 		args   args
 	}{
 		{"happy #1", fields{
-			Schema: "",
-			Name:   "",
-			Ranges: nil,
+			Schema: "s1",
+			Name:   "measurement",
 			IsTest: true,
 		}, args{
-			ct:            time.Now(),
+			currentTime:   leapYearFeb,
 			numProjection: 3,
+			expectedRanges: []DateRange{
+				{Name: "y0029m23", MinDate: "2022", Status: WAITING},
+				{Name: "y0029m00", MinDate: "2022", Status: WAITING},
+				{Name: "y0029m01", MinDate: "2022", Status: WAITING},
+			},
+		}},
+		{"happy existing #2", fields{
+			Schema: "s1",
+			Name:   "measurement",
+			Ranges: []DateRange{
+				{Name: "y0029m23", MinDate: "2022", Status: ATTACHED},
+				{Name: "y0029m00", MinDate: "2022", Status: WAITING},
+			},
+			IsTest: true,
+		}, args{
+			currentTime:   leapYearFeb,
+			numProjection: 3,
+			expectedRanges: []DateRange{
+				{Name: "y0029m23", MinDate: "2022", Status: ATTACHED},
+				{Name: "y0029m00", MinDate: "2022", Status: WAITING},
+				{Name: "y0029m01", MinDate: "2022", Status: WAITING},
+			},
 		}},
 	}
 	for _, tc := range tests {
@@ -103,11 +126,9 @@ func TestTrackedTable_getSliceProjection(t *testing.T) {
 				Ranges: tc.fields.Ranges,
 				IsTest: tc.fields.IsTest,
 			}
-			tt.getSliceProjection(tc.args.ct, tc.args.numProjection)
+			tt.getSliceProjection(tc.args.currentTime, tc.args.numProjection)
 			// Check if the projection is correct ..
-			if diff := cmp.Diff(tt.Ranges, []DateRange{
-				{Name: "bob", MinDate: "2022"},
-			}); diff != "" {
+			if diff := cmp.Diff(tt.Ranges, tc.args.expectedRanges); diff != "" {
 				t.Fatalf("want,got: %s", diff)
 			}
 		})

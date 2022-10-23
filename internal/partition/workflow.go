@@ -309,23 +309,35 @@ func (tt *TrackedTable) getSliceProjection(ct time.Time, numProjection int) {
 		}
 		return ct.Year()
 	}()
-	fmt.Println("MAJOR: ", currentMajorIndex, " MINOR: ", currentMinorIndex)
-	var nt []TrackedTable
+	// Iterate till see currentMajor + currentMinor; or if it finish ..
+	// if finish with nothing use the full numProject; if found -1
+	// DEBUG
+	//fmt.Println("MAJOR: ", currentMajorIndex, " MINOR: ", currentMinorIndex)
+	var nr []DateRange
 	// Project numProjection into future ..
 	for i := 0; i < numProjection; i++ {
 		// Rules for the boundary will be different if it is Test ..
 		// If those index does not exist; add!
 		// If those are WAITING .. do nothing ..
+		var finalMajorIndex, finalMinorIndex int
 		if tt.IsTest {
-
+			finalMajorIndex = currentMajorIndex
+			finalMinorIndex = (currentMinorIndex + i) % 24
+			nr = append(nr, DateRange{
+				Name:    fmt.Sprintf("y%04dm%02d", finalMajorIndex, finalMinorIndex),
+				MinDate: "2022",
+				Status:  WAITING,
+			})
 		} else {
 
 		}
 	}
 	// if temp > 0; then can append ..
-	if len(nt) > 0 {
-		fmt.Println("APPEND these ...")
-		spew.Dump(nt)
+	if len(nr) > 0 {
+		// DEBUG
+		//		fmt.Println("APPEND these ...")
+		//spew.Dump(nr)
+		tt.Ranges = append(tt.Ranges, nr...)
 	} else {
 		fmt.Println("NOTHING to DO ....")
 	}
