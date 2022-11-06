@@ -312,7 +312,7 @@ func (tt *TrackedTable) getSliceProjection(ct time.Time, numProjection int) {
 	// Iterate till see currentMajor + currentMinor; split at this seam
 	// if finish with nothing use the full numProject; if found -1
 	var startIndex, seamIndex int
-	//var leftOver []DateRange
+	var leftOver []DateRange
 	if len(tt.Ranges) > 0 {
 		labelName := fmt.Sprintf("y%04dm%02d", currentMajorIndex, currentMinorIndex)
 		// then iterate through to find the seamIndex
@@ -333,19 +333,26 @@ func (tt *TrackedTable) getSliceProjection(ct time.Time, numProjection int) {
 		// then do slice; else it is full range
 		fmt.Println("SEAMIDX: ", seamIndex)
 		// extract slice sarting wirth seamIndex till len(slice)
-		//leftOver = tt.Ranges[seamIndex:len(tt.Ranges)]
-		//// DEBUG ...
+		leftOver = tt.Ranges[seamIndex:len(tt.Ranges)]
+		// DEBUG ...
 		//spew.Dump(leftOver)
 	}
 	// DEBUG
 	//fmt.Println("MAJOR: ", currentMajorIndex, " MINOR: ", currentMinorIndex)
 	var nr []DateRange
 	var labelName string
+	lenRanges := len(leftOver)
+	fmt.Println("Total items: ", lenRanges)
 	// Project numProjection into future ..
 	for i := startIndex; i < numProjection; i++ {
+		// If those are ATTACHED or WAITING .. do nothing ..
+		if i < lenRanges {
+			if (tt.Ranges[i].Status == ATTACHED) || (tt.Ranges[i].Status == WAITING) {
+				continue
+			}
+		}
 		// Rules for the boundary will be different if it is Test ..
 		// If those index does not exist; add!
-		// If those are WAITING .. do nothing ..
 		var finalMajorIndex, finalMinorIndex int
 		if tt.IsTest {
 			finalMajorIndex = currentMajorIndex
