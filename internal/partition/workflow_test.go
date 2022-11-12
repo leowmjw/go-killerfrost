@@ -1,11 +1,18 @@
 package partition
 
 import (
+	"context"
 	"github.com/google/go-cmp/cmp"
+	"github.com/jackc/pgx/v5"
 	"go.temporal.io/sdk/testsuite"
 	"testing"
 	"time"
 )
+
+func TestMockedLifeCycleWorkflow(t *testing.T) {
+	t.Parallel()
+	// For this, we mock the Activity output .. faster ..
+}
 
 func TestLifeCycleWorkflow(t *testing.T) {
 	t.Parallel()
@@ -46,6 +53,17 @@ func TestLifeCycleWorkflow(t *testing.T) {
 			// All tests should be done by 1s
 			env.SetTestTimeout(time.Second)
 			env.RegisterWorkflow(LifeCycleWorkflow)
+			// Setup Activity + DBs ..
+			// although needed only for full integration; can be mocked out ,,
+			// Setup the PGD connectivity
+			connString := "postgres://s2admin:password@127.0.0.1:5432/myterraform"
+			connConfig, perr := pgx.ParseConfig(connString)
+			pgx.ConnectConfig(context.Background(), connConfig)
+			if perr != nil {
+				panic(perr)
+			}
+			pgd := PostgresDB{ConnConfig: connConfig}
+			env.RegisterActivity(&pgd)
 			// Setuo the signal simulation ..
 			for _, signal := range tt.args.callbacks {
 				// As per normal footgun :sweat:
