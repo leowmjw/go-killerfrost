@@ -17,6 +17,10 @@ const (
 
 type ApprovalState struct{}
 
+func (b ApprovalState) GetStateId() string {
+	return ApprovalStateID
+}
+
 func (b ApprovalState) GetStateID() string {
 	return ApprovalStateID
 }
@@ -31,7 +35,7 @@ func (b ApprovalState) Start(ctx iwf.WorkflowContext, input iwf.Object, persiste
 	return iwf.AnyCommandCompletedRequest(
 		iwf.NewSignalCommand("signal", SignalName),
 		iwf.NewInterStateChannelCommand("intSignal", SignalName),
-		iwf.NewTimerCommand("check", time.Now().Add(10*time.Hour)),
+		iwf.NewTimerCommand("check", time.Now().Add(100*time.Hour)),
 	), nil
 }
 
@@ -42,16 +46,20 @@ func (b ApprovalState) Decide(ctx iwf.WorkflowContext, input iwf.Object, command
 	//	return nil, err
 	//}
 	extSig := commandResults.GetSignalCommandResultByChannel(SignalName)
+	fmt.Println("APPROVE_EXT_SIGNAL .. ==========>")
+	spew.Dump(extSig)
 	if extSig.Status == iwfidl.RECEIVED {
 		var ptSignal PTSignal
 		gerr := extSig.SignalValue.Get(&ptSignal)
 		if gerr != nil {
 			return nil, gerr
 		}
-		fmt.Println("EXT_SIGNAL:")
+		fmt.Println("EXT_SIGNAL_VAL:")
 		spew.Dump(ptSignal)
 	}
 	intSig := commandResults.GetInterStateChannelCommandResultByChannel(SignalName)
+	fmt.Println("APPROVE_INT_SIGNAL .. ==========>")
+	spew.Dump(intSig)
 	if intSig.Status == iwfidl.RECEIVED {
 		var ptSignal PTSignal
 		gerr := intSig.Value.Get(&ptSignal)

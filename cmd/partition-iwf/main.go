@@ -32,9 +32,13 @@ func startWorkflowWorker() (closeFunc func()) {
 	router.POST(iwf.WorkflowStateDecideApi, partition_iwf.ApiV1WorkflowStateDecide)
 	//
 	//
-	router.GET(
-		"/partition/start",
+	router.GET("/partition/start",
 		partition_iwf.StartWorkflow(&basic.PartitionWorkflow{}, "SteadyState", 1),
+	)
+	router.GET("/partition/signal",
+		partition_iwf.SignalWorkflow(&basic.PartitionWorkflow{}, basic.PTSignal{
+			Action: basic.PT_OPS_DUMP,
+		}),
 	)
 	//router.GET("/basic/start", startWorklfow(&basic.BasicWorkflow{}, basic.BasicWorkflowState1Id, 1))
 	//router.GET("/interstateChannel/start", startWorklfow(&interstate.InterStateWorkflow{}, interstate.InterStateWorkflowState0Id, nil))

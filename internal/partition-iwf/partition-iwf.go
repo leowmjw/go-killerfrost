@@ -2,7 +2,9 @@ package partition_iwf
 
 import (
 	"app/internal/partition-iwf/workflows"
+	"app/internal/partition-iwf/workflows/basic"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gin-gonic/gin"
 	"github.com/iworkflowio/iwf-golang-sdk/gen/iwfidl"
 	"github.com/iworkflowio/iwf-golang-sdk/iwf"
@@ -23,6 +25,18 @@ func StartWorkflow(wf iwf.Workflow, startStateId string, input interface{}) gin.
 		}
 		c.JSON(http.StatusOK, fmt.Sprintf("workflowId: %v runId: %v", wfId, runId))
 		return
+	}
+}
+
+// SignalWorkflow symbolizes acceptance ..
+func SignalWorkflow(wf iwf.Workflow, signal basic.PTSignal) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		spew.Dump(ctx)
+		err := client.SignalWorkflow(ctx, wf, "partition-mleow", "", basic.SignalName, signal)
+		if err != nil {
+			fmt.Println("ERR:", err)
+		}
 	}
 }
 

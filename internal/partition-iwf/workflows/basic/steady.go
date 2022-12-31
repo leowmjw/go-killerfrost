@@ -2,6 +2,7 @@ package basic
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/iworkflowio/iwf-golang-sdk/gen/iwfidl"
 	"github.com/iworkflowio/iwf-golang-sdk/iwf"
 	"time"
@@ -26,7 +27,7 @@ func (b SteadyState) Start(ctx iwf.WorkflowContext, input iwf.Object, persistenc
 	return iwf.AnyCommandCompletedRequest(
 		iwf.NewSignalCommand("signal", SignalName),
 		iwf.NewInterStateChannelCommand("intSignal", SignalName),
-		iwf.NewTimerCommand("check", time.Now().Add(10*time.Second)),
+		iwf.NewTimerCommand("check", time.Now().Add(60*time.Second)),
 	), nil
 }
 
@@ -36,6 +37,19 @@ func (b SteadyState) Decide(ctx iwf.WorkflowContext, input iwf.Object, commandRe
 	//if err != nil {
 	//	return nil, err
 	//}
+	extSig := commandResults.GetSignalCommandResultByChannel(SignalName)
+	fmt.Println("APPROVE_EXT_SIGNAL .. ==========>")
+	spew.Dump(extSig)
+	if extSig.Status == iwfidl.RECEIVED {
+		var ptSignal PTSignal
+		gerr := extSig.SignalValue.Get(&ptSignal)
+		if gerr != nil {
+			return nil, gerr
+		}
+		fmt.Println("EXT_SIGNAL_VAL:")
+		spew.Dump(ptSignal)
+	}
+
 	intSig := commandResults.GetInterStateChannelCommandResultByChannel(SignalName)
 	if intSig.Status == iwfidl.RECEIVED {
 
@@ -55,9 +69,9 @@ func (b SteadyState) Decide(ctx iwf.WorkflowContext, input iwf.Object, commandRe
 		}
 	}
 	// Send signal to dump on stuff for the next state ..
-	communication.PublishInterstateChannel(SignalName, PTSignal{
-		Action: PT_OPS_DUMP,
-	})
+	//communication.PublishInterstateChannel(SignalName, PTSignal{
+	//	Action: PT_OPS_DUMP,
+	//})
 	// See if the timer was fired ...
 	return iwf.SingleNextState("ApprovalState", nil), nil
 }

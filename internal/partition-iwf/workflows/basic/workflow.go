@@ -50,6 +50,8 @@ func (b PartitionWorkflow) GetStates() []iwf.StateDef {
 	return []iwf.StateDef{
 		//iwf.NewStartingState(&stead{}),
 		//iwf.NewNonStartingState(&basicWorkflowState2{}),
+		iwf.NewStartingState(SteadyState{}),
+		iwf.NewNonStartingState(ApprovalState{}),
 	}
 }
 
@@ -58,9 +60,13 @@ func (b PartitionWorkflow) GetPersistenceSchema() []iwf.PersistenceFieldDef {
 }
 
 func (b PartitionWorkflow) GetCommunicationSchema() []iwf.CommunicationMethodDef {
-	return []iwf.CommunicationMethodDef{
+	cmd := []iwf.CommunicationMethodDef{
 		iwf.NewSignalChannelDef(SignalName),
+		iwf.NewInterstateChannelDef(SignalName),
 	}
+	// DEBUG
+	//spew.Dump(cmd)
+	return cmd
 }
 
 func (b PartitionWorkflow) GetWorkflowType() string {
