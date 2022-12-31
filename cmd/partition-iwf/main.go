@@ -1,14 +1,19 @@
 package main
 
 import (
+	"app/internal/partition"
 	partition_iwf "app/internal/partition-iwf"
 	basic "app/internal/partition-iwf/workflows/basic"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/iworkflowio/iwf-golang-sdk/iwf"
+	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/worker"
 	"log"
 	"net/http"
-	"sync"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -19,11 +24,35 @@ func main() {
 func Run() {
 	fmt.Println("start running samples")
 	closeFn := startWorkflowWorker()
-	// TODO improve the waiting with process signal
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	wg.Wait()
+	// We can run normal Temporal workers too ..
+	var w worker.Worker
+	go func() {
+		c, err := client.Dial(client.Options{
+			Namespace: "default",
+		})
+		if err != nil {
+			panic(err)
+		}
+		w = worker.New(c, partition.TaskQueue, worker.Options{
+			EnableSessionWorker: true,
+		})
+		// Will stop later ..
+		rerr := w.Start()
+		if rerr != nil {
+			panic(rerr)
+		}
+	}()
+
+	// Block till SIGTERM ..
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	s := <-c
+	fmt.Println("GOT_SIG:", s.String())
+	fmt.Println("UNBLOCKED ..")
+	// Clean up iWF
 	closeFn()
+	// Clean up normal Worker
+	w.Stop()
 }
 
 func startWorkflowWorker() (closeFunc func()) {
