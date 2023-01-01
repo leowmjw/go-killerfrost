@@ -36,6 +36,8 @@ func Run() {
 		w = worker.New(c, partition.TaskQueue, worker.Options{
 			EnableSessionWorker: true,
 		})
+		// Register Activities (DB stuf here .) + Workflow
+		//w.RegisterActivity("")
 		// Will stop later ..
 		rerr := w.Start()
 		if rerr != nil {

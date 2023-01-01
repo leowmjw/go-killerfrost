@@ -44,6 +44,17 @@ type PTState struct {
 	Status PTStatus
 }
 
+type Partition struct {
+	Statement string
+}
+
+type TrackedTables struct {
+	ID       string // ID == Schema/Table??
+	Planned  []Partition
+	Active   []Partition
+	Archived []Partition
+}
+
 type PartitionWorkflow struct{}
 
 func (b PartitionWorkflow) GetStates() []iwf.StateDef {
@@ -52,11 +63,15 @@ func (b PartitionWorkflow) GetStates() []iwf.StateDef {
 		//iwf.NewNonStartingState(&basicWorkflowState2{}),
 		iwf.NewStartingState(SteadyState{}),
 		iwf.NewNonStartingState(ApprovalState{}),
+		iwf.NewNonStartingState(DiffState{}),
 	}
 }
 
 func (b PartitionWorkflow) GetPersistenceSchema() []iwf.PersistenceFieldDef {
-	return nil
+	psc := []iwf.PersistenceFieldDef{
+		iwf.NewDataObjectDef("TrackedTables"),
+	}
+	return psc
 }
 
 func (b PartitionWorkflow) GetCommunicationSchema() []iwf.CommunicationMethodDef {

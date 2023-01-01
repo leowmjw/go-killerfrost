@@ -2,7 +2,6 @@ package basic
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/iworkflowio/iwf-golang-sdk/gen/iwfidl"
 	"github.com/iworkflowio/iwf-golang-sdk/iwf"
 	"time"
@@ -18,10 +17,6 @@ const (
 type ApprovalState struct{}
 
 func (b ApprovalState) GetStateId() string {
-	return ApprovalStateID
-}
-
-func (b ApprovalState) GetStateID() string {
 	return ApprovalStateID
 }
 
@@ -46,20 +41,23 @@ func (b ApprovalState) Decide(ctx iwf.WorkflowContext, input iwf.Object, command
 	//	return nil, err
 	//}
 	extSig := commandResults.GetSignalCommandResultByChannel(SignalName)
-	fmt.Println("APPROVE_EXT_SIGNAL .. ==========>")
-	spew.Dump(extSig)
+	// DEBUG
+	//fmt.Println("APPROVE_EXT_SIGNAL .. ==========>")
+	//spew.Dump(extSig)
 	if extSig.Status == iwfidl.RECEIVED {
 		var ptSignal PTSignal
 		gerr := extSig.SignalValue.Get(&ptSignal)
 		if gerr != nil {
 			return nil, gerr
 		}
-		fmt.Println("EXT_SIGNAL_VAL:")
-		spew.Dump(ptSignal)
+		// DEBUG
+		//fmt.Println("EXT_SIGNAL_VAL:")
+		//spew.Dump(ptSignal)
 	}
 	intSig := commandResults.GetInterStateChannelCommandResultByChannel(SignalName)
-	fmt.Println("APPROVE_INT_SIGNAL .. ==========>")
-	spew.Dump(intSig)
+	// DEBUG
+	//fmt.Println("APPROVE_INT_SIGNAL .. ==========>")
+	//spew.Dump(intSig)
 	if intSig.Status == iwfidl.RECEIVED {
 		var ptSignal PTSignal
 		gerr := intSig.Value.Get(&ptSignal)
@@ -76,6 +74,8 @@ func (b ApprovalState) Decide(ctx iwf.WorkflowContext, input iwf.Object, command
 		}
 	}
 	// Normsl route ..
+	// Approve --> Diff
+	// Reject --> SteadyState ..
 	return iwf.GracefulCompleteWorkflow("NORMAL"), nil
 }
 
