@@ -57,7 +57,7 @@ locals {
 
     # ---------------------------------- ROLES ------------------------------------------------------------------------------------
     db_roles = [
-      { id = "admin", role = "s2admin", inherit = true, login = false, validity = "infinity", privileges = ["USAGE", "CREATE"], createrole = true },
+      { id = "admin", role = "s2admin", inherit = true, login = true, validity = "infinity", privileges = ["USAGE", "CREATE"], createrole = true },
       { id = "readonly", role = "s2read", inherit = true, login = false, validity = "infinity", privileges = ["USAGE"], createrole = false },
       { id = "write", role = "s2write", inherit = true, login = false, validity = "infinity", privileges = ["USAGE"], createrole = false },
     ],

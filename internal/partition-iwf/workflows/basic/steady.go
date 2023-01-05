@@ -5,19 +5,33 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/iworkflowio/iwf-golang-sdk/gen/iwfidl"
 	"github.com/iworkflowio/iwf-golang-sdk/iwf"
+	"github.com/jackc/pgx/v5"
 	"time"
 )
+
+type PostgresDB struct {
+	ConnConfig *pgx.ConnConfig
+	Conn       *pgx.Conn
+}
 
 // Steady state is when the partitions are matching approved plan;
 //	until next cycle of evaluation
 
-type SteadyState struct{}
+type SteadyState struct {
+	db string
+}
 
 func (b SteadyState) GetStateId() string {
 	return "SteadyState"
 }
 
 func (b SteadyState) Start(ctx iwf.WorkflowContext, input iwf.Object, persistence iwf.Persistence, communication iwf.Communication) (*iwf.CommandRequest, error) {
+	fmt.Println("STEADY_START ===========")
+	if b.db == "" {
+		fmt.Println("ONe time DB in Steady ..")
+		b.db = "SETUP.."
+	}
+
 	//var i int
 	//err := input.Get(&i)
 	//if err != nil {
@@ -67,6 +81,12 @@ func (b SteadyState) Start(ctx iwf.WorkflowContext, input iwf.Object, persistenc
 }
 
 func (b SteadyState) Decide(ctx iwf.WorkflowContext, input iwf.Object, commandResults iwf.CommandResults, persistence iwf.Persistence, communication iwf.Communication) (*iwf.StateDecision, error) {
+	fmt.Println("STEADY_DECIDE ===========")
+	if b.db == "" {
+		fmt.Println("ERROR: SHOULD be named!!")
+	} else {
+		fmt.Println("VAI STRUCT: ", b.db)
+	}
 	//var i int
 	//err := input.Get(&i)
 	//if err != nil {
