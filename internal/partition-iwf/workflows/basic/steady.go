@@ -18,7 +18,7 @@ type PostgresDB struct {
 //	until next cycle of evaluation
 
 type SteadyState struct {
-	db string
+	db *PostgresDB
 }
 
 func (b SteadyState) GetStateId() string {
@@ -27,11 +27,6 @@ func (b SteadyState) GetStateId() string {
 
 func (b SteadyState) Start(ctx iwf.WorkflowContext, input iwf.Object, persistence iwf.Persistence, communication iwf.Communication) (*iwf.CommandRequest, error) {
 	fmt.Println("STEADY_START ===========")
-	if b.db == "" {
-		fmt.Println("ONe time DB in Steady ..")
-		b.db = "SETUP.."
-	}
-
 	//var i int
 	//err := input.Get(&i)
 	//if err != nil {
@@ -82,10 +77,16 @@ func (b SteadyState) Start(ctx iwf.WorkflowContext, input iwf.Object, persistenc
 
 func (b SteadyState) Decide(ctx iwf.WorkflowContext, input iwf.Object, commandResults iwf.CommandResults, persistence iwf.Persistence, communication iwf.Communication) (*iwf.StateDecision, error) {
 	fmt.Println("STEADY_DECIDE ===========")
-	if b.db == "" {
-		fmt.Println("ERROR: SHOULD be named!!")
-	} else {
-		fmt.Println("VAI STRUCT: ", b.db)
+	if b.db.Conn == nil {
+		fmt.Println("Setup ConnString in Steady ..")
+		// connString can be passed along probably; from setup?
+		connString := "postgres://s2admin:password@127.0.0.1:5432/myterraform"
+		connConfig, err := pgx.ParseConfig(connString)
+		if err != nil {
+			// fmt.Println("ERR:", err)
+			panic(err)
+		}
+		b.db.ConnConfig = connConfig
 	}
 	//var i int
 	//err := input.Get(&i)

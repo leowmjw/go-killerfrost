@@ -57,13 +57,21 @@ type TrackedTables struct {
 
 type PartitionWorkflow struct{}
 
+func setupStates() (SteadyState, DiffState) {
+	// Can it be shared? Risk for address will be multi-node is not by copy ..
+	// likely better by copy, and one per state; no sharing ..
+	db := &PostgresDB{}
+	return SteadyState{db: db}, DiffState{db: db}
+}
+
 func (b PartitionWorkflow) GetStates() []iwf.StateDef {
+	ss, ds := setupStates()
 	return []iwf.StateDef{
 		//iwf.NewStartingState(&stead{}),
 		//iwf.NewNonStartingState(&basicWorkflowState2{}),
-		iwf.NewStartingState(SteadyState{}),
+		iwf.NewStartingState(ss),
 		iwf.NewNonStartingState(ApprovalState{}),
-		iwf.NewNonStartingState(DiffState{}),
+		iwf.NewNonStartingState(ds),
 	}
 }
 
