@@ -24,7 +24,22 @@ func main() {
 func Run() {
 	fmt.Println("start running samples")
 	closeFn := startWorkflowWorker()
+	// Clean up iWF
+	defer closeFn()
 	// We can run normal Temporal workers too ..
+	closeTemporalFn := startTemporalWorker()
+	defer closeTemporalFn()
+
+	// Block till SIGTERM ..
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	s := <-c
+	fmt.Println("GOT_SIG:", s.String())
+	fmt.Println("UNBLOCKED ..")
+	// At this point the defers should kick in ..
+}
+
+func startTemporalWorker() (closeFunc func()) {
 	var w worker.Worker
 	go func() {
 		c, err := client.Dial(client.Options{
@@ -45,18 +60,12 @@ func Run() {
 		}
 	}()
 
-	// Block till SIGTERM ..
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	s := <-c
-	fmt.Println("GOT_SIG:", s.String())
-	fmt.Println("UNBLOCKED ..")
-	// Clean up iWF
-	closeFn()
 	// Clean up normal Worker
-	w.Stop()
+	return func() {
+		fmt.Println("Closing Temporal Worker ...")
+		w.Stop()
+	}
 }
-
 func startWorkflowWorker() (closeFunc func()) {
 	router := gin.Default()
 	router.POST(iwf.WorkflowStateStartApi, partition_iwf.ApiV1WorkflowStateStart)
@@ -86,5 +95,8 @@ func startWorkflowWorker() (closeFunc func()) {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()
-	return func() { wfServer.Close() }
+	return func() {
+		fmt.Println("Closing iWF Worker ...")
+		wfServer.Close()
+	}
 }
